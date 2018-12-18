@@ -1,10 +1,9 @@
+#!/usr/bin/python 
 # ******************************************************
 # Author       : CoffreLv
-# Last modified:	2018-12-18 15:54
+# Last modified: 2018-12-18 15:52
 # Email        : coffrelv@163.com
-# Filename     :	ASR_CNN_CTC.mlog
-# Description  : ASR_CNN_CTC的实现日志
+# Filename     : acoustic_model.py
+# Description  : 
 # ******************************************************
 
-#2018-12-18
-创建，着手实现,创建编码文件
