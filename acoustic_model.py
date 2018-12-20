@@ -10,6 +10,7 @@
 import os
 import time
 import random
+import difflib
 
 import keras as kr
 import numpy as np
@@ -18,6 +19,10 @@ from keras.layers import Dense,Droput, Input, Reshape
 from keras.layers import Activation, Conv2D, MaxPooling2D, Lambda
 from keras.optimizers import Adam
 from keras import backend as BK
+from get_feature import Acoustic_data
+
+abspath = ''
+model_Name = 'cnn3ctc'
 
 class Acoustic_model(): #声学模型类
     def __init__(self , datapath):
@@ -89,5 +94,140 @@ class Acoustic_model(): #声学模型类
 
         y_pre = y_pre[:,:,:]
         return BK.ctc_batch_cost(labels, y_pre, input_length, label_length)
+################################################################################################
+    def Model_training(self, datapath, epoch = 1, save_Step = 1000, batch_size = 16, filename = 'acoustic_model/' + model_Name + '/model'+model_Name):
+        '''
+        训练模型
+        参数：
+                datapath:数据路径
+                epoch:迭代轮数
+                save_step:每多少步保存一次模型
+                filename:默认保存文件名，不含文件后缀名
+        '''
+        data = Acoustic_data(datapath, 'train')
+        num_Data = data.Get_data_num()  #获取数据数量
+        yield_Datas = data.Data_genetator(batch_size, self.AUDIO_LENGTH)
+        for epoch in range(epoch):  #迭代次数
+            print('[running] train epoch %d .' % epoch)
+            n_Step = 0 #迭代数据数
+            while True:
+                try:
+                    print('[message] epoch %d . Have train datas %d+'%(epoch, n_Step*save_Step))
+                    self._model.fit_generator(yield_Datas, save_Step)
+                    n_Step += 1
+                except StopIteration:
+                    print('[error] generator error. Please check data format.')
+                    break
+                self.Save_model(comment = '_e_' + str(epoch) + '_steo_' + str(n_Step*save_Step))
+                self.Test_model(self.datapath, str_Data = 'train', data_Count = 4)
+                self.Test_model(self.datapath, str_Data = 'dev', data_Count = 4)
 
+    def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name +'/model'+model_Name, comment = ''):
+        '''
+        保存模型参数
+        '''
+        if（not os.path.exists(filepath)):
+            os.makedirs(filepath)
+        self._model.save_weights(filepath + comment +'.model')
+        self.base_model.save_weights(filepath + comment + '.model.base')
+        f = open('step' + model_Name + '.txt', 'w',encoding = 'utf-8')
+        f.write(filepath + comment)
+        f.close()
 
+    def Test_model(self, datapath = '', str_Data = 'dev', data_Count = 32, out_Report = Flase, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
+        '''
+        测试检验模型效果
+	io_step_print
+            为了减少测试时标准输出的io开销，可以通过调整这个参数来实现
+	io_step_file
+            为了减少测试时文件读写的io开销，可以通过调整这个参数来实现
+	'''
+	data = Acoustic_data(self.datapath, str_Data)
+	num_Data = data.Get_data_num() # 获取数据的数量
+	if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
+            data_Count = num_Data
+        try:
+            random_Num = random.randint(0,num_Data - 1) # 获取一个随机数
+            words_Num = 0
+            word_Error_Num = 0
+            nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
+            if(out_Report == True):
+                f = open('Test_Report_' + str_Data + '_' + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
+            tmp = '测试报告\n模型编号 ' + model_Name + '\n\n'
+            for i in range(data_Count):
+                data_Input, data_Labels = data.Get_data((random_Num + i) % num_Data)  # 从随机数开始连续向后取一定数量数据
+                # 数据格式出错处理 开始
+                # 当输入的wav文件长度过长时自动跳过该文件，转而使用下一个wav文件来运行
+                num_Bias = 0
+                while(data_Input.shape[0] > self.AUDIO_LENGTH):
+                    print('*[Error]','wave data lenghth of num',(ran_Num + i) % num_Data, 'is too long.','\n A Exception raise when test Speech Model.')
+                    num_Bias += 1
+                    data_Input, data_Labels = data.Get_data((ran_Num + i + num_Bias) % num_Data)  # 从随机数开始连续向后取一定数量数据
+                pre = self.Predict(data_Input, data_Input.shape[0] // 8)
+                words_n = data_Labels.shape[0] # 获取每个句子的字数
+                words_num += words_n # 把句子的总字数加上
+                edit_Distance = Get_edit_distance(data_Labels, pre) # 获取编辑距离
+                if(edit_Distance <= words_n): # 当编辑距离小于等于句子字数时
+                    word_Error_Num += edit_Distance # 使用编辑距离作为错误字数
+                else: # 否则肯定是增加了一堆乱七八糟的奇奇怪怪的字
+                    word_Error_Num += words_n # 就直接加句子本来的总字数就好了
+                if((i % io_Step_Print == 0 or i == data_Count - 1) and show_Ratio == True):
+                    print('Test Count: ',i,'/',data_Count)
+                if(out_Report == True):
+                    if(i % io_Step_File == 0 or i == data_Count - 1):
+                        f.write(tmp)
+                        tmp = ''
+                    tmp += str(i) + '\n'
+                    tmp += 'True:\t' + str(data_Labels) + '\n'
+                    tmp += 'Pred:\t' + str(pre) + '\n'
+                    tmp += '\n'
+            print('*[Test Result] Speech Recognition ' + str_Data + ' set word error ratio: ', word_Error_Num / words_num * 100, '%')
+            if(out_Report == True):
+                tmp += '*[测试结果] 语音识别 ' + str_Data + ' 集语音单字错误率： ' + str(word_Error_Num / words_num * 100) + ' %'
+                f.write(tmp)
+                tmp = ''
+                f.close()
+        except StopIteration:
+            print('[Error] Model Test Error. please check data format.')
+
+    def Predict(self, data_Input, input_len):
+        '''
+        预测结果
+        返回语音识别后的拼音符号列表
+        '''
+        batch_size = 1
+        in_len = np.zeros((batch_size),dtype = np.int32)
+        in_len[0] = input_len
+        x_in = np.zeros((batch_size, 1600, self.AUDIO_FEATURE_LENGTH, 1), dtype=np.float)
+        for i in range(batch_size):
+            x_in[i,0:len(data_Input)] = data_Input
+            base_Pred = self.base_model.predict(x = x_in)
+            base_Pred =base_pred[:, :, :]
+            r = BK.ctc_decode(base_Pred, in_len, greedy = True, beam_width=100, top_paths=1)
+            r1 = BK.get_value(r[0][0])
+            r1=r1[0]
+            return r1
+        pass
+
+    def GetEditDistance(str1, str2):
+        leven_cost = 0
+        s = difflib.SequenceMatcher(None, str1, str2)
+        for tag, i1, i2, j1, j2 in s.get_opcodes():
+            #print('{:7} a[{}: {}] --> b[{}: {}] {} --> {}'.format(tag, i1, i2, j1, j2, str1[i1: i2], str2[j1: j2]))
+            if tag == 'replace':
+                leven_cost += max(i2-i1, j2-j1)
+            elif tag == 'insert':
+                leven_cost += (j2-j1)
+            elif tag == 'delete':
+                leven_cost += (i2-i1)
+        return leven_cost
+
+    @property
+    def model(self):
+        '''
+        返回keras model
+        '''
+        return self._model
+
+if(__name__ == '__main__'):
+    exit()
