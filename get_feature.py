@@ -12,7 +12,7 @@ import wave
 import random
 
 import numpy as np
-import scipy.fftpack import fft
+import scipy.fftpack as fft
 
 
 class Acoustic_data():
@@ -186,7 +186,7 @@ class Acoustic_data():
         else:
             filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start // ratio]]
             list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //bili]]
-            wav_Signal, fs = Read_wav_data(self.datapath + filepath)
+            wav_Signal, fs = Read_wav_data( filepath)
 
             feat_Out = []
 
@@ -225,9 +225,9 @@ class Acoustic_data():
             return self.list_Symbol.index(symbol)
         return self.symbol_Num
 
-#汉明窗
-x = np.linspace(0, 400 - 1, 400, dtype = np.int64)
-w = 0.54 - 0.46 * np.cos(2 * np.pi *(x) / (400-1))
+    #汉明窗
+    x = np.linspace(0, 400 - 1, 400, dtype = np.int64)
+    w = 0.54 - 0.46 * np.cos(2 * np.pi *(x) / (400-1))
 
     def Get_frequecy_feature(wav_Signal, fs):
         '''
@@ -241,7 +241,7 @@ w = 0.54 - 0.46 * np.cos(2 * np.pi *(x) / (400-1))
 
         range_End = int(len(wav_Signal[0]) / fs * 1000 - time_Window) // 10 #计算循环终止的位置，也就是最终生成的窗数
         data_Input = np.zeros((range_End, 200), dtype = np.float)   #用于存放最终的频率特征数据
-        data_Line = np.zeros((1, 400), dtype np.float)
+        data_Line = np.zeros((1, 400), dtype = np.float)
 
         for i in range(0, range_End):
             p_Start = i * 160

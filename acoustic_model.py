@@ -15,7 +15,7 @@ import difflib
 import keras as kr
 import numpy as np
 from keras.models import Model
-from keras.layers import Dense,Droput, Input, Reshape
+from keras.layers import Dense,Dropout, Input, Reshape
 from keras.layers import Activation, Conv2D, MaxPooling2D, Lambda
 from keras.optimizers import Adam
 from keras import backend as BK
@@ -29,7 +29,7 @@ class Acoustic_model(): #声学模型类
         '''
         初始化
         '''
-        MS_OUTPUT_SIZE = 100
+        MS_OUTPUT_SIZE = 973
         self.MS_OUTPUT_SIZE = MS_OUTPUT_SIZE    #模型最终输出的维度大小
         self.label_max_length = 64  #？？？
         self.AUDIO_LENGTH = 1600    #一次送入的特征个数
@@ -77,7 +77,7 @@ class Acoustic_model(): #声学模型类
         input_length = Input(name = 'input_length', shape = [1], dtype = 'int64')
         label_length = Input(name = 'label_length', shape = [1], dtype = 'int64')
 
-        loss_out = Lambda(self.ctc_lambda_func, output_shape - (1, ), name = 'ctc')([y_pre,labels, input_length, label_length])
+        loss_out = Lambda(self.ctc_lambda_func, output_shape = (1, ), name = 'ctc')([y_pre,labels, input_length, label_length])
 
         model = Model(inputs = [input_data, labels, input_length, label_length], output = loss_out)
         model.summary()
@@ -126,7 +126,7 @@ class Acoustic_model(): #声学模型类
         '''
         保存模型参数
         '''
-        if（not os.path.exists(filepath)):
+        if(not os.path.exists(filepath)):
             os.makedirs(filepath)
         self._model.save_weights(filepath + comment +'.model')
         self.base_model.save_weights(filepath + comment + '.model.base')
@@ -134,7 +134,7 @@ class Acoustic_model(): #声学模型类
         f.write(filepath + comment)
         f.close()
 
-    def Test_model(self, datapath = '', str_Data = 'dev', data_Count = 32, out_Report = Flase, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
+    def Test_model(self, datapath = '', str_Data = 'dev', data_Count = 32, out_Report = False, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         '''
         测试检验模型效果
 	io_step_print
@@ -142,9 +142,9 @@ class Acoustic_model(): #声学模型类
 	io_step_file
             为了减少测试时文件读写的io开销，可以通过调整这个参数来实现
 	'''
-	data = Acoustic_data(self.datapath, str_Data)
-	num_Data = data.Get_data_num() # 获取数据的数量
-	if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
+        data = Acoustic_data(self.datapath, str_Data)
+        num_Data = data.Get_data_num() # 获取数据的数量
+        if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
             data_Count = num_Data
         try:
             random_Num = random.randint(0,num_Data - 1) # 获取一个随机数
@@ -171,8 +171,8 @@ class Acoustic_model(): #声学模型类
                     word_Error_Num += edit_Distance # 使用编辑距离作为错误字数
                 else: # 否则肯定是增加了一堆乱七八糟的奇奇怪怪的字
                     word_Error_Num += words_n # 就直接加句子本来的总字数就好了
-                if((i % io_Step_Print == 0 or i == data_Count - 1) and show_Ratio == True):
-                    print('Test Count: ',i,'/',data_Count)
+                    if((i % io_Step_Print == 0 or i == data_Count - 1) and show_Ratio == True):
+                        print('Test Count: ',i,'/',data_Count)
                 if(out_Report == True):
                     if(i % io_Step_File == 0 or i == data_Count - 1):
                         f.write(tmp)
@@ -181,7 +181,7 @@ class Acoustic_model(): #声学模型类
                     tmp += 'True:\t' + str(data_Labels) + '\n'
                     tmp += 'Pred:\t' + str(pre) + '\n'
                     tmp += '\n'
-            print('*[Test Result] Speech Recognition ' + str_Data + ' set word error ratio: ', word_Error_Num / words_num * 100, '%')
+                print('*[Test Result] Speech Recognition ' + str_Data + ' set word error ratio: ', word_Error_Num / words_num * 100, '%')
             if(out_Report == True):
                 tmp += '*[测试结果] 语音识别 ' + str_Data + ' 集语音单字错误率： ' + str(word_Error_Num / words_num * 100) + ' %'
                 f.write(tmp)
