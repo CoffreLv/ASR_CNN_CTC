@@ -1,6 +1,9 @@
 #我添加的ignore
 dataset/
 tmp/
+doc/
+acoustic_model/
+lexicon.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
