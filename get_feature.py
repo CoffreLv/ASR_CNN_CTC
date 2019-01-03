@@ -51,7 +51,7 @@ class Acoustic_data():
         加载标注符号列表，用于标记符号
         返回一个列表list类型变量
         '''
-        f = open('lexicon.txt', 'r', encoding = 'UTF-8')
+        f = open('dict.txt', 'r', encoding = 'UTF-8')
         f_Text = f.read()   #读取全部字典数据
         symbol_Lines = f_Text.split('\n')   #分割字典数据
         list_Symbol = []
@@ -59,10 +59,45 @@ class Acoustic_data():
             if(i!=''):
                 tmp = i.split('\t')
                 list_Symbol.append(tmp[0])
-        f_Text.close()
+        f.close()
         list_Symbol.append('_')
         self.symbol_Num = len(list_Symbol)
         return list_Symbol
+
+    def Get_wav_list(self,filepath):
+        '''
+        读取wav文件列表，返回一个存储该列表的字典
+        '''
+        f = open(filepath, 'r', encoding = 'UTF-8')
+        f_Text = f.read()   #读取列表
+        wavlist_Lines = f_Text.split('\n')   #分割列表
+        dic_Wav_Filelist = {}   #初始化字典
+        list_Wavmark = []   #初始化wav列表
+        for i in wavlist_Lines:
+            if(i != ''):
+                tmp = i.split(' ')
+                dic_Wav_Filelist[tmp[0]] = tmp[1]
+                list_Wavmark.append(tmp[0])
+        f.close()
+        return dic_Wav_Filelist,list_Wavmark
+
+    def Get_wav_symbol(self,filepath):
+        '''
+        读取数据集中，wav文件对应的标注符号
+        返回一个存储标注符号集的字典
+        '''
+        f = open(filepath, 'r', encoding = 'UTF-8')
+        f_Text = f.read()
+        symbol_Lines = f_Text.split('\n')
+        dic_Symbollist = {}
+        list_Symbolmark = []
+        for i in symbol_Lines:
+            if(i !=''):
+                tmp = i.split(' ')
+                dic_Symbollist[tmp[0]] = tmp[1]
+                list_Symbolmark.append(tmp[0])
+        f.close()
+        return dic_Symbollist,list_Symbolmark
 
     def Load_data_list(self):
         '''
@@ -82,45 +117,10 @@ class Acoustic_data():
         else:
             filename_Wavlist = ''   #默认为空
             filename_Symbollist = ''
-
-        self.dic_Wavlist, self.list_Wav_Num = Get_wav_list(self.datapath + filename_Wavlist)
-        self.dic_Symbollist , self.list_Symbol_Num = Get_wav_symbol(self.datapath + filename_Symbollist)
+        test_Path = self.datapath + filename_Wavlist
+        self.dic_Wavlist,self.list_Wav_Num = self.Get_wav_list(test_Path)
+        self.dic_Symbollist,self.list_Symbol_Num = self.Get_wav_symbol(self.datapath + filename_Symbollist)
         self.data_Num = self.Get_data_num()
-
-    def Get_wav_list(filepath):
-        '''
-        读取wav文件列表，返回一个存储该列表的字典
-        '''
-        f = open(filepath, 'r', encoding = 'UTF-8')
-        f_Text = f.read()   #读取列表
-        wavlist_Lines = f_Text.split('\n')   #分割列表
-        dic_Wav_Filelist = {}   #初始化字典
-        list_Wavmark = []   #初始化wav列表
-        for i in wavlist_Lines:
-            if(i != ''):
-                tmp = i.split(' ')
-                dic_Wav_Filelist[tmp[0]] = tmp[1]
-                list_Wavmark.append(tmp[0])
-        f_Text.close()
-        return dic_Wav_Filelist,list_Wavmark
-
-    def Get_wav_symbol(filepath):
-        '''
-        读取数据集中，wav文件对应的标注符号
-        返回一个存储标注符号集的字典
-        '''
-        f = open(filepath, 'r', encoding = 'UTF-8')
-        f_Text = f.read()
-        symbol_Lines = f_Text.split('\n')
-        dic_Symbollist = {}
-        list_Symbolmark = []
-        for i in symbol_Lines:
-            if(i !=''):
-                tmp = i.split(' ')
-                dic_Symbollist[tmp[0]] = tmp[1]
-                list_Symbolmark.append(tmp[0])
-        f_Text.close()
-        return dic_Symbollist,list_Symbolmark
 
     def Get_data_num(self):
         '''
@@ -129,7 +129,7 @@ class Acoustic_data():
         '''
         num_Wavlist = len(self.dic_Wavlist)
         num_Symbollist = len(self.dic_Symbollist)
-        if(num_Wavlist == num_symbollist):
+        if(num_Wavlist == num_Symbollist):
             data_Num = num_Wavlist
         else:
             data_Num = -1
@@ -182,11 +182,11 @@ class Acoustic_data():
             ratio = 11
         if(num_Start % ratio == 0):
             filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start // ratio]]
-            list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //bili]]
+            list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //ratio]]
         else:
             filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start // ratio]]
-            list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //bili]]
-            wav_Signal, fs = Read_wav_data( filepath)
+            list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //ratio]]
+            wav_Signal, fs = self.Read_wav_data( filepath)
 
             feat_Out = []
 
@@ -201,7 +201,7 @@ class Acoustic_data():
 
             return data_Input, data_Label
 
-    def Read_wav_data(filepath):
+    def Read_wav_data(self,filepath):
         '''
         读取一个wav文件，返回声音信号的时域谱矩阵和播放时间
         '''
