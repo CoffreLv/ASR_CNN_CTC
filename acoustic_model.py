@@ -68,9 +68,11 @@ class Acoustic_model(): #声学模型类
         layer_p9 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c8) #池化层9
         layer_f10 = Reshape((200, 3200))(layer_p9)  #Reshape层10
         layer_f10 = Dropout(0.2)(layer_f10)
-        layer_fu11 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f10)    #全连接层11
+        layer_f11 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f10)    #全连接层11
+        layer_f11 = Dropout(0.3)(layer_f11)
+        layer_fu12 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f11)
 ################################################################################################
-        y_pre = Activation('softmax', name = 'Activation0')(layer_fu11)
+        y_pre = Activation('softmax', name = 'Activation0')(layer_fu12)
         model_data = Model(inputs = input_data, output = y_pre)
 
         labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
@@ -202,7 +204,7 @@ class Acoustic_model(): #声学模型类
         for i in range(batch_size):
             x_in[i,0:len(data_Input)] = data_Input
             base_Pred = self.base_model.predict(x = x_in)
-            base_Pred =base_pred[:, :, :]
+            base_Pred = base_Pred[:, :, :]
             r = BK.ctc_decode(base_Pred, in_len, greedy = True, beam_width=100, top_paths=1)
             r1 = BK.get_value(r[0][0])
             r1=r1[0]

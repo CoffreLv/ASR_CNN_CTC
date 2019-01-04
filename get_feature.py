@@ -12,8 +12,12 @@ import wave
 import random
 
 import numpy as np
-import scipy.fftpack as fft
+from scipy.fftpack import fft
 
+
+#汉明窗
+x = np.linspace(0, 400 - 1, 400, dtype = np.int64)
+w = 0.54 - 0.46 * np.cos(2 * np.pi *(x) / (400-1))
 
 class Acoustic_data():
 
@@ -51,7 +55,7 @@ class Acoustic_data():
         加载标注符号列表，用于标记符号
         返回一个列表list类型变量
         '''
-        f = open('dict.txt', 'r', encoding = 'UTF-8')
+        f = open('lexicon.txt', 'r', encoding = 'UTF-8')
         f_Text = f.read()   #读取全部字典数据
         symbol_Lines = f_Text.split('\n')   #分割字典数据
         list_Symbol = []
@@ -94,7 +98,7 @@ class Acoustic_data():
         for i in symbol_Lines:
             if(i !=''):
                 tmp = i.split(' ')
-                dic_Symbollist[tmp[0]] = tmp[1]
+                dic_Symbollist[tmp[0]] = tmp[1:]
                 list_Symbolmark.append(tmp[0])
         f.close()
         return dic_Symbollist,list_Symbolmark
@@ -186,20 +190,20 @@ class Acoustic_data():
         else:
             filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start // ratio]]
             list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //ratio]]
-            wav_Signal, fs = self.Read_wav_data( filepath)
+        wav_Signal, fs = self.Read_wav_data( filepath)
 
-            feat_Out = []
+        feat_Out = []
 
-            for i in list_Symbol:
-                if (i != ''):
-                    tmp = self.Symbol_to_num(i)
-                    feat_out.append(tmp)
+        for i in list_Symbol:
+            if (i != ''):
+                tmp = self.Symbol_to_num(i)
+                feat_Out.append(tmp)
 
-            data_Input = Get_frequecy_feature(wav_Signal, fs)
-            data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
-            data_Label = np.array(feat_Out)
+        data_Input = self.Get_frequecy_feature(wav_Signal, fs)
+        data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
+        data_Label = np.array(feat_Out)
 
-            return data_Input, data_Label
+        return data_Input, data_Label
 
     def Read_wav_data(self,filepath):
         '''
@@ -217,6 +221,12 @@ class Acoustic_data():
         wave_Data = wave_Data.T #转置矩阵
         return wave_Data, frame_Rate
 
+    def Get_symbol_num(self):
+        '''
+        获取符号数量
+        '''
+        return len(self.list_Symbol)
+
     def Symbol_to_num(self, symbol):
         '''
         将符号转为数字
@@ -225,11 +235,7 @@ class Acoustic_data():
             return self.list_Symbol.index(symbol)
         return self.symbol_Num
 
-    #汉明窗
-    x = np.linspace(0, 400 - 1, 400, dtype = np.int64)
-    w = 0.54 - 0.46 * np.cos(2 * np.pi *(x) / (400-1))
-
-    def Get_frequecy_feature(wav_Signal, fs):
+    def Get_frequecy_feature(self, wav_Signal, fs):
         '''
         对输入数据进行处理,加窗？？？？？？
         '''
@@ -250,6 +256,6 @@ class Acoustic_data():
             data_Line = data_Line * w   #加汉明窗
             data_Line = np.abs(fft(data_Line)) / wav_Length
             data_Input[i] = data_Line[0: 200]   #设置维400除以2是取一半数据，因为是对称的
-            data_Input = np.log(data_Input +1)
-            return data_Input
+        data_Input = np.log(data_Input +1)
+        return data_Input
 
