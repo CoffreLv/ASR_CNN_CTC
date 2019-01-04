@@ -122,7 +122,7 @@ class Acoustic_model(): #声学模型类
                     break
                 self.Save_model(comment = '_e_' + str(epoch) + '_steo_' + str(n_Step*save_Step))
                 self.Test_model(self.datapath, str_Data = 'train', data_Count = 4)
-                self.Test_model(self.datapath, str_Data = 'dev', data_Count = 4)
+                self.Test_model(self.datapath, str_Data = 'cv', data_Count = 4)
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name +'/model'+model_Name, comment = ''):
         '''
@@ -136,7 +136,7 @@ class Acoustic_model(): #声学模型类
         f.write(filepath + comment)
         f.close()
 
-    def Test_model(self, datapath = '', str_Data = 'dev', data_Count = 32, out_Report = False, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
+    def Test_model(self, datapath = '', str_Data = 'cv', data_Count = 32, out_Report = False, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         '''
         测试检验模型效果
 	io_step_print
@@ -144,7 +144,7 @@ class Acoustic_model(): #声学模型类
 	io_step_file
             为了减少测试时文件读写的io开销，可以通过调整这个参数来实现
 	'''
-        data = Acoustic_data(self.datapath, str_Data)
+        data = Acoustic_data(self.datapath , str_Data)
         num_Data = data.Get_data_num() # 获取数据的数量
         if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
             data_Count = num_Data
@@ -166,13 +166,13 @@ class Acoustic_model(): #声学模型类
                     num_Bias += 1
                     data_Input, data_Labels = data.Get_data((ran_Num + i + num_Bias) % num_Data)  # 从随机数开始连续向后取一定数量数据
                 pre = self.Predict(data_Input, data_Input.shape[0] // 8)
-                words_n = data_Labels.shape[0] # 获取每个句子的字数
-                words_num += words_n # 把句子的总字数加上
-                edit_Distance = Get_edit_distance(data_Labels, pre) # 获取编辑距离
-                if(edit_Distance <= words_n): # 当编辑距离小于等于句子字数时
+                words_Num = data_Labels.shape[0] # 获取每个句子的字数
+                words_Num += words_Num # 把句子的总字数加上
+                edit_Distance = self.Get_edit_distance(data_Labels, pre) # 获取编辑距离
+                if(edit_Distance <= words_Num): # 当编辑距离小于等于句子字数时
                     word_Error_Num += edit_Distance # 使用编辑距离作为错误字数
                 else: # 否则肯定是增加了一堆乱七八糟的奇奇怪怪的字
-                    word_Error_Num += words_n # 就直接加句子本来的总字数就好了
+                    word_Error_Num += words_Num # 就直接加句子本来的总字数就好了
                     if((i % io_Step_Print == 0 or i == data_Count - 1) and show_Ratio == True):
                         print('Test Count: ',i,'/',data_Count)
                 if(out_Report == True):
@@ -183,9 +183,9 @@ class Acoustic_model(): #声学模型类
                     tmp += 'True:\t' + str(data_Labels) + '\n'
                     tmp += 'Pred:\t' + str(pre) + '\n'
                     tmp += '\n'
-                print('*[Test Result] Speech Recognition ' + str_Data + ' set word error ratio: ', word_Error_Num / words_num * 100, '%')
+                print('*[Test Result] Speech Recognition ' + str_Data + ' set word error ratio: ', word_Error_Num / words_Num * 100, '%')
             if(out_Report == True):
-                tmp += '*[测试结果] 语音识别 ' + str_Data + ' 集语音单字错误率： ' + str(word_Error_Num / words_num * 100) + ' %'
+                tmp += '*[测试结果] 语音识别 ' + str_Data + ' 集语音单字错误率： ' + str(word_Error_Num / words_Num * 100) + ' %'
                 f.write(tmp)
                 tmp = ''
                 f.close()
@@ -211,7 +211,7 @@ class Acoustic_model(): #声学模型类
             return r1
         pass
 
-    def GetEditDistance(str1, str2):
+    def Get_edit_distance(self, str1, str2):
         leven_cost = 0
         s = difflib.SequenceMatcher(None, str1, str2)
         for tag, i1, i2, j1, j2 in s.get_opcodes():
