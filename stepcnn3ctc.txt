@@ -1,1 +1,1 @@
-acoustic_model/cnn3ctc/modelcnn3ctc_e_0_steo_100
+acoustic_model/cnn3ctc/modelcnn3ctc_e_0_steo_3700

@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 # ******************************************************
 # Author       : CoffreLv
 # Last modified: 2019-01-02 10:36
@@ -12,17 +12,17 @@ import sys
 import re
 
 filepath = sys.argv[1]
-dictpath = sys.argv[2]
+#dictpath = sys.argv[2]
+dictpath = 'lexicon.txt'
 
-def Get_pinyin_and_word(filepath):
+#通过 音频对应文本+标注 文档生成 标注+词 的文档
+def Get_pinyin_and_word(filepath, dictpath):
     f_Markfile = open(filepath , 'r', encoding = 'UTF-8')
     sentence_And_Mark_List = []
     for line in f_Markfile:
         sentence_And_Mark_List.append(line)
     f_Markfile.close()
     sentence_And_Mark_Dict = {}
-    #sentence_List = []
-    #mark_List = []
     for i in sentence_And_Mark_List:
         sentence = re.sub('[a-zA-Z]','',i)
         sentence = sentence.strip()
@@ -40,13 +40,25 @@ def Get_pinyin_and_word(filepath):
         num = 0
         for word in word_List:
             f_Dictfile.write(word_Mark_List[num] + '\t' + word + '\n')
-            #f_Dictfile.write(word + '\t' + word_Mark_List[num] + '\n')
-            #print(word+'\t'+word_Mark_List[num]+'\n')
             num += 1
     f_Dictfile.close()
-    #print(sentence_And_Mark_Dict)
-    #f_dictfile = open(dictpath, 'w', encoding = 'UTF-8')
+    Remove_same_line(dictpath)
+
+#删除相同的行，此处用于处理字典中重复的标注
+def Remove_same_line(filename):
+    f =  open(filename , mode = 'r', encoding = 'utf-8')
+    line_list = []
+    for line in f:
+        if line in line_list:
+            continue
+        else:
+            line_list.append(line)
+    f.close()
+    f = open(filename, mode = 'w', encoding = 'utf-8')
+    for line in line_list:
+        f.write(line)
+    f.close()
 
 if __name__ == '__main__':
-    Get_pinyin_and_word(filepath)
+    Get_pinyin_and_word(filepath, dictpath)
     exit()
