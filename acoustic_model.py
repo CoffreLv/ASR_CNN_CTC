@@ -97,14 +97,13 @@ class Acoustic_model(): #声学模型类
         y_pre = y_pre[:,:,:]
         return BK.ctc_batch_cost(labels, y_pre, input_length, label_length)
 ################################################################################################
-    def Model_training(self, datapath, epoch = 1, save_Step = 1000, batch_size = 16, filename = 'acoustic_model/' + model_Name + '/model'+model_Name):
+    def Model_training(self, datapath, epoch = 1, save_Step = 1000, batch_size = 16):
         '''
         训练模型
         参数：
                 datapath:数据路径
                 epoch:迭代轮数
                 save_step:每多少步保存一次模型
-                filename:默认保存文件名，不含文件后缀名
         '''
         data = Acoustic_data(datapath, 'train')
         num_Data = data.Get_data_num()  #获取数据数量
@@ -121,8 +120,8 @@ class Acoustic_model(): #声学模型类
                     print('[error] generator error. Please check data format.')
                     break
                 self.Save_model(comment = '_e_' + str(epoch) + '_steo_' + str(n_Step*save_Step))
-                self.Test_model(self.datapath, str_Data = 'train', data_Count = 4)
-                self.Test_model(self.datapath, str_Data = 'cv', data_Count = 4)
+                self.Test_model(self.datapath, str_Data = 'train', data_Count = 100)
+                self.Test_model(self.datapath, str_Data = 'cv', data_Count = 100)
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name +'/model'+model_Name, comment = ''):
         '''
@@ -136,7 +135,7 @@ class Acoustic_model(): #声学模型类
         f.write(filepath + comment)
         f.close()
 
-    def Test_model(self, datapath = '', str_Data = 'cv', data_Count = 32, out_Report = False, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
+    def Test_model(self, datapath = '', str_Data = 'cv', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         '''
         测试检验模型效果
 	io_step_print
@@ -154,25 +153,29 @@ class Acoustic_model(): #声学模型类
             word_Error_Num = 0
             nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
             if(out_Report == True):
-                f = open('Test_Report_' + str_Data + '_' + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
+                if not os.path.exists('./Test_Report_' + str_Data):
+                    os.mkdir('./Test_Report_' + str_Data)
+                f = open('Test_Report_' + str_Data + '/' + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
             tmp = '测试报告\n模型编号 ' + model_Name + '\n\n'
             for i in range(data_Count):
                 data_Input, data_Labels = data.Get_data((random_Num + i) % num_Data)  # 从随机数开始连续向后取一定数量数据
+                #=data_Input, data_Labels = data.Get_data(1 , data_Count)  # 从随机数开始连续向后取一定数量数据
                 # 数据格式出错处理 开始
                 # 当输入的wav文件长度过长时自动跳过该文件，转而使用下一个wav文件来运行
                 num_Bias = 0
                 while(data_Input.shape[0] > self.AUDIO_LENGTH):
-                    print('*[Error]','wave data lenghth of num',(ran_Num + i) % num_Data, 'is too long.','\n A Exception raise when test Speech Model.')
+                    print('*[Error]','wave data lenghth of num',(random_Num + i) % num_Data, 'is too long.','\n A Exception raise when test Speech Model.')
                     num_Bias += 1
-                    data_Input, data_Labels = data.Get_data((ran_Num + i + num_Bias) % num_Data)  # 从随机数开始连续向后取一定数量数据
+                    data_Input, data_Labels = data.Get_data((random_Num + i + num_Bias) % num_Data)  # 从随机数开始连续向后取一定数量数据
+                    #=data_Input, data_Labels = data.Get_data(1, data_Count)  # 从随机数开始连续向后取一定数量数据
                 pre = self.Predict(data_Input, data_Input.shape[0] // 8)
-                words_Num = data_Labels.shape[0] # 获取每个句子的字数
-                words_Num += words_Num # 把句子的总字数加上
+                words_Num_Now = data_Labels.shape[0] # 获取每个句子的字数
+                words_Num += words_Num_Now # 把句子的总字数加上
                 edit_Distance = self.Get_edit_distance(data_Labels, pre) # 获取编辑距离
                 if(edit_Distance <= words_Num): # 当编辑距离小于等于句子字数时
                     word_Error_Num += edit_Distance # 使用编辑距离作为错误字数
                 else: # 否则肯定是增加了一堆乱七八糟的奇奇怪怪的字
-                    word_Error_Num += words_Num # 就直接加句子本来的总字数就好了
+                    word_Error_Num += words_Num_Now # 就直接加句子本来的总字数就好了
                     if((i % io_Step_Print == 0 or i == data_Count - 1) and show_Ratio == True):
                         print('Test Count: ',i,'/',data_Count)
                 if(out_Report == True):
@@ -203,12 +206,14 @@ class Acoustic_model(): #声学模型类
         x_in = np.zeros((batch_size, 1600, self.AUDIO_FEATURE_LENGTH, 1), dtype=np.float)
         for i in range(batch_size):
             x_in[i,0:len(data_Input)] = data_Input
-            base_Pred = self.base_model.predict(x = x_in)
-            base_Pred = base_Pred[:, :, :]
-            r = BK.ctc_decode(base_Pred, in_len, greedy = True, beam_width=100, top_paths=1)
-            r1 = BK.get_value(r[0][0])
-            r1=r1[0]
-            return r1
+        base_Pred = self.base_model.predict(x = x_in)
+        base_Pred = base_Pred[:, :, :]
+        r = BK.ctc_decode(base_Pred, in_len, greedy = True, beam_width=100, top_paths=1)
+        r1 = BK.get_value(r[0][0])
+        r1=r1[0]
+        #=print(r1)   #测试输出
+        #=print('\n') #测试输出
+        return r1
         pass
 
     def Get_edit_distance(self, str1, str2):
