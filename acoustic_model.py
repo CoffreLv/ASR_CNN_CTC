@@ -153,9 +153,9 @@ class Acoustic_model(): #声学模型类
             word_Error_Num = 0
             nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
             if(out_Report == True):
-                if not os.path.exists('./Test_Report_' + str_Data):
-                    os.mkdir('./Test_Report_' + str_Data)
-                f = open('Test_Report_' + str_Data + '/' + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
+                if not os.path.exists('./doc/Test_Report_' + str_Data):
+                    os.mkdir('./doc/Test_Report_' + str_Data)
+                f = open('./doc/Test_Report_' + str_Data + '/' + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
             tmp = '测试报告\n模型编号 ' + model_Name + '\n\n'
             for i in range(data_Count):
                 data_Input, data_Labels = data.Get_data((random_Num + i) % num_Data)  # 从随机数开始连续向后取一定数量数据
