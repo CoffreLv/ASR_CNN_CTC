@@ -139,6 +139,44 @@ class Acoustic_data():
             data_Num = -1
         return data_Num
 
+    def data_Genetator_All(self, batch_size = 32, audio_length = 1600):
+        '''
+        数据生成器函数，用于keras的generator_fit训练
+        参数：
+                batch_size:一次产生的数据量
+                audio_length:音频长度（约16s）
+        '''
+        counter = 0
+        batch_Size = batch_size
+        labels = []
+        for i in range(0,batch_size):
+            labels.append([0.0])
+
+        labels = np.array(labels, dtype = np.float)
+
+        while counter*batch_Size < self.data_Num:
+            batch_size = batch_Size
+            X = np.zeros((batch_size, audio_length, 200, 1), dtype = np.float)
+            y = np.zeros((batch_size, 64), dtype = np.int16)
+
+            input_Length = []
+            label_Length = []
+            if (counter+1)*batch_size > self.data_Num:
+                batch_size = batch_size - (counter+1) * batch_size + self.data_Num
+            for i in range(batch_size):
+                data_Be_Gotten_Num = counter*batch_size + i  #获取数据的编号
+                data_Input , data_Labels = self.get_Data(data_Be_Gotten_Num)    #获取编号数据
+                input_Length.append(data_Input.shape[0] // 8 + data_Input.shape[0] %8)
+                X[i,0:len(data_Input)] = data_Input
+                y[i,0:len(data_Labels)] = data_Labels
+                label_Length.append([len(data_Labels)])
+            counter += 1
+            print('------------------------------------------------------')
+            label_Length = np.matrix(label_Length)
+            input_Length = np.array(input_Length).T
+            yield [X, y, input_Length, label_Length ],labels
+        pass
+
     def Data_genetator(self, batch_size = 32, audio_length = 1600):
         '''
         数据生成器函数，用于keras的generator_fit训练
@@ -171,6 +209,33 @@ class Acoustic_data():
             input_Length = np.array(input_Length).T
             yield [X, y, input_Length, label_Length ],labels
         pass
+
+    def get_Data(self, num_Start, num_Amount = 1):
+        '''
+        读取数据，返回神经网络输入和输出矩阵（可直接用于训练网络）
+        参数：
+                num_Start:开始选取数据的编号
+                num_Amount:选取的数据数量，默认为1，即一次一个wav文件
+        返回：
+                三个包含wav特征矩阵的神经网络输入值，和一个标定的类别矩阵神经网络输出值
+        '''
+        filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start]]
+        list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start]]
+        wav_Signal, fs = self.Read_wav_data( filepath)
+
+        feat_Out = []
+
+        for i in list_Symbol:
+            if (i != ''):
+                tmp = self.Symbol_to_num(i)
+                feat_Out.append(tmp)
+
+        data_Input = self.Get_frequecy_feature(wav_Signal, fs)
+        data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
+        data_Label = np.array(feat_Out)
+        print(list_Symbol)
+
+        return data_Input, data_Label
 
     def Get_data(self, num_Start, num_Amount = 1):
         '''

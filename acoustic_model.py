@@ -23,6 +23,7 @@ from get_feature import Acoustic_data
 
 abspath = ''
 model_Name = 'cnn3ctc'
+save_Model_counter = 0
 
 class Acoustic_model(): #声学模型类
     def __init__(self , datapath):
@@ -66,6 +67,8 @@ class Acoustic_model(): #声学模型类
         layer_c7 = Dropout(0.15)(layer_c7)   #为卷积层7添加Dropout
         layer_c8 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c7)    #卷积层8
         layer_p9 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c8) #池化层9
+
+        #修改音频长度需要对应修改
         layer_f10 = Reshape((200, 3200))(layer_p9)  #Reshape层10
         layer_f10 = Dropout(0.2)(layer_f10)
         layer_f11 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f10)    #全连接层11
@@ -96,8 +99,33 @@ class Acoustic_model(): #声学模型类
 
         y_pre = y_pre[:,:,:]
         return BK.ctc_batch_cost(labels, y_pre, input_length, label_length)
-################################################################################################
-    def Model_training(self, datapath, epoch = 1, save_Step = 1000, batch_size = 16):
+
+    def Model_training_All(self, datapath, epoch = 1, batch_size = 16): #抽取全部数据训练
+        '''
+        训练模型
+        参数：
+                datapath:数据路径
+                epoch:迭代轮数
+        '''
+        now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
+        data_Counter = 0
+        data = Acoustic_data(datapath, 'train')
+        num_Data = data.Get_data_num()  #获取数据数量
+        print("训练数据条数：%d"%num_Data)
+        for epoch in range(epoch):  #迭代次数
+            yield_Datas = data.data_Genetator_All(batch_size, self.AUDIO_LENGTH)
+            print('\n[running] train epoch %d .' % epoch)
+            while data_Counter*batch_size < num_Data:
+                try:
+                    self._model.fit_generator(yield_Datas, steps_per_epoch = 25)
+                except StopIteration:
+                    print('[error] generator error. Please check data format.')
+                    break
+            self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + now_Time + '/',comment = 'e_' + str(epoch))
+            self.Test_model(self.datapath, str_Data = 'train', data_Count = 10)
+            #self.Test_model(self.datapath, str_Data = 'cv', data_Count = 10)
+
+    def Model_training(self, datapath, epoch = 1, save_Step = 1000, batch_size = 16):   #随机抽取数据训练
         '''
         训练模型
         参数：
@@ -105,6 +133,7 @@ class Acoustic_model(): #声学模型类
                 epoch:迭代轮数
                 save_step:每多少步保存一次模型
         '''
+        now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
         data = Acoustic_data(datapath, 'train')
         num_Data = data.Get_data_num()  #获取数据数量
         yield_Datas = data.Data_genetator(batch_size, self.AUDIO_LENGTH)
@@ -119,11 +148,11 @@ class Acoustic_model(): #声学模型类
                 except StopIteration:
                     print('[error] generator error. Please check data format.')
                     break
-                self.Save_model(comment = '_e_' + str(epoch) + '_steo_' + str(n_Step*save_Step))
+                self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + now_Time + '/',comment = 'e_' + str(epoch) + '_steo_' + str(n_Step*save_Step))
                 self.Test_model(self.datapath, str_Data = 'train', data_Count = 100)
                 self.Test_model(self.datapath, str_Data = 'cv', data_Count = 100)
 
-    def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name +'/model'+model_Name, comment = ''):
+    def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):
         '''
         保存模型参数
         '''
