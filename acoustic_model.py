@@ -12,10 +12,11 @@ import time
 import random
 import difflib
 
+import get_feature
 import keras as kr
 import numpy as np
 from keras.models import Model
-from keras.layers import Dense,Dropout, Input, Reshape
+from keras.layers import Dense, Dropout, Input, Reshape
 from keras.layers import Activation, Conv2D, MaxPooling2D, Lambda
 from keras.optimizers import Adam
 from keras import backend as BK
@@ -24,6 +25,7 @@ from get_feature import Acoustic_data
 abspath = ''
 model_Name = 'cnn3ctc'
 save_Model_counter = 0
+now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
 
 class Acoustic_model(): #声学模型类
     def __init__(self , datapath):
@@ -133,7 +135,6 @@ class Acoustic_model(): #声学模型类
                 epoch:迭代轮数
                 save_step:每多少步保存一次模型
         '''
-        now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
         data = Acoustic_data(datapath, 'train')
         num_Data = data.Get_data_num()  #获取数据数量
         yield_Datas = data.Data_genetator(batch_size, self.AUDIO_LENGTH)
@@ -182,9 +183,10 @@ class Acoustic_model(): #声学模型类
             word_Error_Num = 0
             nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
             if(out_Report == True):
-                if not os.path.exists('./doc/Test_Report_' + str_Data):
-                    os.mkdir('./doc/Test_Report_' + str_Data)
-                f = open('./doc/Test_Report_' + str_Data + '/' + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
+                logpath = './doc/Test_Log_' + str_Data + '/' + now_Time +'/'
+                if not os.path.exists(logpath):
+                    os.mkdir(logpath)
+                f = open(logpath + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
             tmp = '测试报告\n模型编号 ' + model_Name + '\n\n'
             for i in range(data_Count):
                 data_Input, data_Labels = data.Get_data((random_Num + i) % num_Data)  # 从随机数开始连续向后取一定数量数据
@@ -198,6 +200,17 @@ class Acoustic_model(): #声学模型类
                     data_Input, data_Labels = data.Get_data((random_Num + i + num_Bias) % num_Data)  # 从随机数开始连续向后取一定数量数据
                     #=data_Input, data_Labels = data.Get_data(1, data_Count)  # 从随机数开始连续向后取一定数量数据
                 pre = self.Predict(data_Input, data_Input.shape[0] // 8)
+
+                #预测对比字符输出准备
+                list_Symbol_Dict = data.Get_symbol_list()
+
+                r_PRE = []  #初始化列表用于存储预测对应字符串
+                for i in pre:
+                    r_PRE.append(list_Symbol_Dict[i])
+                r_NOW = []  #初始化列表用于存储原字符串
+                for j in data_Labels:
+                    r_NOW.append(list_Symbol_Dict[j])
+
                 words_Num_Now = data_Labels.shape[0] # 获取每个句子的字数
                 words_Num += words_Num_Now # 把句子的总字数加上
                 edit_Distance = self.Get_edit_distance(data_Labels, pre) # 获取编辑距离
@@ -213,7 +226,9 @@ class Acoustic_model(): #声学模型类
                         tmp = ''
                     tmp += str(i) + '\n'
                     tmp += 'True:\t' + str(data_Labels) + '\n'
+                    tmp += '\t' + str(r_NOW) + '\n'
                     tmp += 'Pred:\t' + str(pre) + '\n'
+                    tmp += '\t' + str(r_PRE) + '\n'
                     tmp += '\n'
                 print('*[Test Result] Speech Recognition ' + str_Data + ' set word error ratio: ', word_Error_Num / words_Num * 100, '%')
             if(out_Report == True):
@@ -243,6 +258,28 @@ class Acoustic_model(): #声学模型类
         #=print(r1)   #测试输出
         #=print('\n') #测试输出
         return r1
+        pass
+
+    def speech_Recognize(self, wav_Signal, fs): #识别函数       有待修改
+        data_Input = get_feature.Get_frequecy_feature(wav_Signal, fs)
+        input_Length = len(data_Input)
+        input_Length = input_Length // 8
+
+        data_Input = np.array(data_Input, dtype = np.float)
+        data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
+        r1 = self.Predict(data_Input, input_Length)
+        list_Symbol_Dict = Get_symbol_list(self.datapath)
+
+        r_STR = []
+        for i in r1:
+            r_STR.append(list_Symbol_Dict[i])
+        return r_STR
+        pass
+
+    def speech_Recognize_Fromfile(self, filename):
+        wav_Signal, fs = Read_wav_data(filename)
+        r = self.speech_Recognize(wav_Signal, fs)
+        return r
         pass
 
     def Get_edit_distance(self, str1, str2):
