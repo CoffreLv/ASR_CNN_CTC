@@ -7,3 +7,10 @@
 # Description  : 
 # ******************************************************
 
+from acoustic_model import Acoustic_model
+
+datapath = 'dataset'
+
+model_session = Acoustic_model(datapath)
+model_session.Load_Model(filename = './acoustic_model/cnn3ctc20190311_1043/e_99.model')
+model_session.Test_model_all(datapath = './dataset', str_Data = 'test', data_Count = 1200)

@@ -1,10 +1,10 @@
 #!/usr/bin/python 
 # ******************************************************
 # Author       : CoffreLv
-# Last modified: 2018-12-18 15:52
+# Last modified:	2019-03-12 08:28
 # Email        : coffrelv@163.com
-# Filename     : acoustic_model.py
-# Description  : 
+# Filename     :	acoustic_model.py
+# Description  :    声学模型类 
 # ******************************************************
 
 import os
@@ -25,7 +25,6 @@ from get_feature import Acoustic_data
 abspath = ''
 model_Name = 'cnn3ctc'
 save_Model_counter = 0
-now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
 
 class Acoustic_model(): #声学模型类
     def __init__(self , datapath):
@@ -42,6 +41,7 @@ class Acoustic_model(): #声学模型类
         self.datapath = datapath    #初始化数据路径赋值
         self.slash  = '/'
         self.datapath = self.datapath + self.slash
+        self.now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
 
     def Create_model(self):
         '''
@@ -102,61 +102,32 @@ class Acoustic_model(): #声学模型类
         y_pre = y_pre[:,:,:]
         return BK.ctc_batch_cost(labels, y_pre, input_length, label_length)
 
-    def Model_training_All(self, datapath, epoch = 1, batch_size = 16): #抽取全部数据训练
+    def Model_training_all(self, datapath, epoch = 100, batch_size = 8): #抽取全部数据训练
         '''
         训练模型
         参数：
                 datapath:数据路径
                 epoch:迭代轮数
         '''
-        now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
-        data_Counter = 0
+        data_Counter = 1
         data = Acoustic_data(datapath, 'train')
         num_Data = data.Get_data_num()  #获取数据数量
         print("训练数据条数：%d"%num_Data)
         for epoch in range(epoch):  #迭代次数
-            yield_Datas = data.data_Genetator_All(batch_size, self.AUDIO_LENGTH)
+            yield_Datas = data.Data_genetator_all(batch_size, self.AUDIO_LENGTH)
             print('\n[running] train epoch %d .' % epoch)
             while data_Counter*batch_size < num_Data:
                 try:
-                    self._model.fit_generator(yield_Datas, steps_per_epoch = 25)
+                    self._model.fit_generator(yield_Datas, steps_per_epoch = 125)
                 except StopIteration:
                     print('[error] generator error. Please check data format.')
                     break
-            self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + now_Time + '/',comment = 'e_' + str(epoch))
-            self.Test_model(self.datapath, str_Data = 'train', data_Count = 10)
-            #self.Test_model(self.datapath, str_Data = 'cv', data_Count = 10)
+                data_Counter += 1
+            self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + self.now_Time + '/',comment = 'e_' + str(epoch))
+            self.Test_model_all(self.datapath, str_Data = 'train', data_Count = 10)
+            self.Test_model_all(self.datapath, str_Data = 'cv', data_Count = 10)
 
-    def Model_training(self, datapath, epoch = 1, save_Step = 1000, batch_size = 16):   #随机抽取数据训练
-        '''
-        训练模型
-        参数：
-                datapath:数据路径
-                epoch:迭代轮数
-                save_step:每多少步保存一次模型
-        '''
-        data = Acoustic_data(datapath, 'train')
-        num_Data = data.Get_data_num()  #获取数据数量
-        yield_Datas = data.Data_genetator(batch_size, self.AUDIO_LENGTH)
-        for epoch in range(epoch):  #迭代次数
-            print('[running] train epoch %d .' % epoch)
-            n_Step = 0 #迭代数据数
-            while True:
-                try:
-                    print('[message] epoch %d . Have train datas %d+'%(epoch, n_Step*save_Step))
-                    self._model.fit_generator(yield_Datas, save_Step)
-                    n_Step += 1
-                except StopIteration:
-                    print('[error] generator error. Please check data format.')
-                    break
-                self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + now_Time + '/',comment = 'e_' + str(epoch) + '_steo_' + str(n_Step*save_Step))
-                self.Test_model(self.datapath, str_Data = 'train', data_Count = 100)
-                self.Test_model(self.datapath, str_Data = 'cv', data_Count = 100)
-
-    def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):
-        '''
-        保存模型参数
-        '''
+    def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
         if(not os.path.exists(filepath)):
             os.makedirs(filepath)
         self._model.save_weights(filepath + comment +'.model')
@@ -165,7 +136,11 @@ class Acoustic_model(): #声学模型类
         f.write(filepath + comment)
         f.close()
 
-    def Test_model(self, datapath = '', str_Data = 'cv', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
+    def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
+        self._model.load_weights(filename)
+        self.base_model.load_weights(filename + '.base')
+
+    def Test_model_all(self, datapath = '', str_Data = 'cv', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         '''
         测试检验模型效果
 	io_step_print
@@ -178,31 +153,30 @@ class Acoustic_model(): #声学模型类
         if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
             data_Count = num_Data
         try:
-            random_Num = random.randint(0,num_Data - 1) # 获取一个随机数
+            #random_Num = random.randint(0,num_Data - 1) # 获取一个随机数
             words_Num = 0
             word_Error_Num = 0
             nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
             if(out_Report == True):
-                logpath = './doc/Test_Log_' + str_Data + '/' + now_Time +'/'
+                logpath = './doc/Test_Log_' + str_Data + '/' + self.now_Time +'/'
                 if not os.path.exists(logpath):
                     os.mkdir(logpath)
                 f = open(logpath + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入
             tmp = '测试报告\n模型编号 ' + model_Name + '\n\n'
             for i in range(data_Count):
-                data_Input, data_Labels = data.Get_data((random_Num + i) % num_Data)  # 从随机数开始连续向后取一定数量数据
-                #=data_Input, data_Labels = data.Get_data(1 , data_Count)  # 从随机数开始连续向后取一定数量数据
+                data_Input, data_Labels = data.Get_data_all( i )  # 从随机数开始连续向后取一定数量数据
                 # 数据格式出错处理 开始
                 # 当输入的wav文件长度过长时自动跳过该文件，转而使用下一个wav文件来运行
                 num_Bias = 0
                 while(data_Input.shape[0] > self.AUDIO_LENGTH):
-                    print('*[Error]','wave data lenghth of num',(random_Num + i) % num_Data, 'is too long.','\n A Exception raise when test Speech Model.')
+                    print('*[Error]','wave data lenghth of num', str(i) , 'is too long.','\n A Exception raise when test Speech Model.')
                     num_Bias += 1
-                    data_Input, data_Labels = data.Get_data((random_Num + i + num_Bias) % num_Data)  # 从随机数开始连续向后取一定数量数据
+                    data_Input, data_Labels = data.Get_data(i + num_Bias)  # 从随机数开始连续向后取一定数量数据
                     #=data_Input, data_Labels = data.Get_data(1, data_Count)  # 从随机数开始连续向后取一定数量数据
                 pre = self.Predict(data_Input, data_Input.shape[0] // 8)
 
                 #预测对比字符输出准备
-                list_Symbol_Dict = data.Get_symbol_list()
+                list_Symbol_Dict = get_feature.Get_symbol_list()
 
                 r_PRE = []  #初始化列表用于存储预测对应字符串
                 for i in pre:
@@ -255,8 +229,6 @@ class Acoustic_model(): #声学模型类
         r = BK.ctc_decode(base_Pred, in_len, greedy = True, beam_width=100, top_paths=1)
         r1 = BK.get_value(r[0][0])
         r1=r1[0]
-        #=print(r1)   #测试输出
-        #=print('\n') #测试输出
         return r1
         pass
 
@@ -268,7 +240,7 @@ class Acoustic_model(): #声学模型类
         data_Input = np.array(data_Input, dtype = np.float)
         data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
         r1 = self.Predict(data_Input, input_Length)
-        list_Symbol_Dict = Get_symbol_list(self.datapath)
+        list_Symbol_Dict = get_feature.Get_symbol_list(self.datapath)
 
         r_STR = []
         for i in r1:
@@ -286,7 +258,6 @@ class Acoustic_model(): #声学模型类
         leven_cost = 0
         s = difflib.SequenceMatcher(None, str1, str2)
         for tag, i1, i2, j1, j2 in s.get_opcodes():
-            #print('{:7} a[{}: {}] --> b[{}: {}] {} --> {}'.format(tag, i1, i2, j1, j2, str1[i1: i2], str2[j1: j2]))
             if tag == 'replace':
                 leven_cost += max(i2-i1, j2-j1)
             elif tag == 'insert':

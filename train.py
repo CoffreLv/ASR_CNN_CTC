@@ -21,4 +21,4 @@ if (not os.path.exists(modelpath)): #创建模型存储目录
     os.makedirs(modelpath)
 
 model_session = Acoustic_model(datapath)
-model_session.Model_training_All(datapath, epoch = 100, batch_size = 8)
+model_session.Model_training_all(datapath)

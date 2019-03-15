@@ -37,8 +37,8 @@ class Acoustic_data():
         self.dic_Wavlist = {}
         self.dic_Symbollist = {}
 
-        self.symbol_Num = 0 #标注符号的数量
-        self.list_Symbol = self.Get_symbol_list()   #标注符号列表
+        self.symbol_Num = self.Get_symbol_num #标注符号的数量
+        self.list_Symbol = Get_symbol_list()   #标注符号列表
         self.list_Wav_Num = []  #wav文件标记列表
         self.list_Symbol_Num = []   #symbol标价列表
 
@@ -50,23 +50,6 @@ class Acoustic_data():
         self.MemWavCount = MemWavCount
         pass
 
-    def Get_symbol_list(self):
-        '''
-        加载标注符号列表，用于标记符号
-        返回一个列表list类型变量
-        '''
-        f = open('lexicon.txt', 'r', encoding = 'UTF-8')
-        f_Text = f.read()   #读取全部字典数据
-        symbol_Lines = f_Text.split('\n')   #分割字典数据
-        list_Symbol = []
-        for i in symbol_Lines:
-            if(i!=''):
-                tmp = i.split('\t')
-                list_Symbol.append(tmp[0])
-        f.close()
-        list_Symbol.append('_')
-        self.symbol_Num = len(list_Symbol)
-        return list_Symbol
 
 
     def Load_data_list(self):
@@ -105,7 +88,7 @@ class Acoustic_data():
             data_Num = -1
         return data_Num
 
-    def data_Genetator_All(self, batch_size = 32, audio_length = 1600):
+    def Data_genetator_all(self, batch_size = 32, audio_length = 1600):
         '''
         数据生成器函数，用于keras的generator_fit训练
         参数：
@@ -127,11 +110,9 @@ class Acoustic_data():
 
             input_Length = []
             label_Length = []
-            if (counter+1)*batch_size > self.data_Num:
-                batch_size = batch_size - (counter+1) * batch_size + self.data_Num
             for i in range(batch_size):
                 data_Be_Gotten_Num = counter*batch_size + i  #获取数据的编号
-                data_Input , data_Labels = self.get_Data(data_Be_Gotten_Num)    #获取编号数据
+                data_Input , data_Labels = self.Get_data_all(data_Be_Gotten_Num)    #获取编号数据
                 input_Length.append(data_Input.shape[0] // 8 + data_Input.shape[0] %8)
                 X[i,0:len(data_Input)] = data_Input
                 y[i,0:len(data_Labels)] = data_Labels
@@ -142,40 +123,7 @@ class Acoustic_data():
             yield [X, y, input_Length, label_Length ],labels
         pass
 
-    def Data_genetator(self, batch_size = 32, audio_length = 1600):
-        '''
-        数据生成器函数，用于keras的generator_fit训练
-        参数：
-                batch_size:一次产生的数据量
-                audio_length:音频长度（约16s）
-        '''
-        labels = []
-        for i in range(0,batch_size):
-            labels.append([0.0])
-
-        labels = np.array(labels, dtype = np.float)
-
-        while True:
-            X = np.zeros((batch_size, audio_length, 200, 1), dtype = np.float)
-            y = np.zeros((batch_size, 64), dtype = np.int16)
-
-            input_Length = []
-            label_Length = []
-
-            for i in range(batch_size):
-                random_Num = random.randint(0, self.data_Num - 1)   #获取一个随机数
-                data_Input , data_Labels = self.Get_data(random_Num)    #根据随机数选取一个数据
-                input_Length.append(data_Input.shape[0] // 8 + data_Input.shape[0] %8)
-                X[i,0:len(data_Input)] = data_Input
-                y[i,0:len(data_Labels)] = data_Labels
-                label_Length.append([len(data_Labels)])
-
-            label_Length = np.matrix(label_Length)
-            input_Length = np.array(input_Length).T
-            yield [X, y, input_Length, label_Length ],labels
-        pass
-
-    def get_Data(self, num_Start, num_Amount = 1):
+    def Get_data_all(self, num_Start, num_Amount = 1):
         '''
         读取数据，返回神经网络输入和输出矩阵（可直接用于训练网络）
         参数：
@@ -184,6 +132,7 @@ class Acoustic_data():
         返回：
                 三个包含wav特征矩阵的神经网络输入值，和一个标定的类别矩阵神经网络输出值
         '''
+        print(num_Start)
         filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start]]
         list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start]]
         wav_Signal, fs = Read_wav_data( filepath)
@@ -196,39 +145,6 @@ class Acoustic_data():
                 feat_Out.append(tmp)
 
         data_Input = Get_frequecy_feature(wav_Signal, fs)
-        data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
-        data_Label = np.array(feat_Out)
-
-        return data_Input, data_Label
-
-    def Get_data(self, num_Start, num_Amount = 1):
-        '''
-        读取数据，返回神经网络输入和输出矩阵（可直接用于训练网络）
-        参数：
-                num_Start:开始选取数据的编号
-                num_Amount:选取的数据数量，默认为1，即一次一个wav文件
-        返回：
-                三个包含wav特征矩阵的神经网络输入值，和一个标定的类别矩阵神经网络输出值
-        '''
-        ratio = 2
-        if(self.type == 'train'):
-            ratio = 11
-        if(num_Start % ratio == 0):
-            filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start // ratio]]
-            list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //ratio]]
-        else:
-            filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start // ratio]]
-            list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start //ratio]]
-        wav_Signal, fs = self.Read_wav_data( filepath)
-
-        feat_Out = []
-
-        for i in list_Symbol:
-            if (i != ''):
-                tmp = self.Symbol_to_num(i)
-                feat_Out.append(tmp)
-
-        data_Input = self.Get_frequecy_feature(wav_Signal, fs)
         data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
         data_Label = np.array(feat_Out)
 
@@ -248,7 +164,24 @@ class Acoustic_data():
             return self.list_Symbol.index(symbol)
         return self.symbol_Num
 
-def Get_wav_list(self,filepath):
+def Get_symbol_list():
+    '''
+    加载标注符号列表，用于标记符号
+    返回一个列表list类型变量
+    '''
+    f = open('lexicon.txt', 'r', encoding = 'UTF-8')
+    f_Text = f.read()   #读取全部字典数据
+    symbol_Lines = f_Text.split('\n')   #分割字典数据
+    list_Symbol = []
+    for i in symbol_Lines:
+        if(i!=''):
+            tmp = i.split('\t')
+            list_Symbol.append(tmp[0])
+    f.close()
+    list_Symbol.append('_')
+    return list_Symbol
+
+def Get_wav_list(filepath):
     '''
     读取wav文件列表，返回一个存储该列表的字典
     '''
@@ -265,7 +198,7 @@ def Get_wav_list(self,filepath):
     f.close()
     return dic_Wav_Filelist,list_Wavmark
 
-def Get_wav_symbol(self,filepath):
+def Get_wav_symbol(filepath):
     '''
     读取数据集中，wav文件对应的标注符号
     返回一个存储标注符号集的字典

@@ -1,10 +1,11 @@
 #!/usr/bin/python 
 # ******************************************************
 # Author       : CoffreLv
-# Last modified: 2018-12-18 15:52
+# Last modified:	2019-03-12 08:24
 # Email        : coffrelv@163.com
-# Filename     : language_model.py
-# Description  : 
+# Filename     :	language_model.py
+# Description  :    从柠檬博客ＡＳＲＴ借鉴过来的语言模型,
+#                   尚未启用 
 # ******************************************************
 
 import platform as plat
