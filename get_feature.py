@@ -132,7 +132,6 @@ class Acoustic_data():
         返回：
                 三个包含wav特征矩阵的神经网络输入值，和一个标定的类别矩阵神经网络输出值
         '''
-        print(num_Start)
         filepath = self.dic_Wavlist[self.list_Wav_Num[num_Start]]
         list_Symbol = self.dic_Symbollist[self.list_Symbol_Num[num_Start]]
         wav_Signal, fs = Read_wav_data( filepath)

@@ -12,7 +12,6 @@ import time
 import random
 import difflib
 
-import get_feature
 import keras as kr
 import numpy as np
 from keras.models import Model
@@ -20,8 +19,11 @@ from keras.layers import Dense, Dropout, Input, Reshape
 from keras.layers import Activation, Conv2D, MaxPooling2D, Lambda
 from keras.optimizers import Adam
 from keras import backend as BK
-from get_feature import Acoustic_data
 
+import get_feature
+import get_data_generation
+from get_feature import Acoustic_data
+from get_data_generation import DataGenerator
 abspath = ''
 model_Name = 'cnn3ctc'
 save_Model_counter = 0
@@ -102,7 +104,7 @@ class Acoustic_model(): #声学模型类
         y_pre = y_pre[:,:,:]
         return BK.ctc_batch_cost(labels, y_pre, input_length, label_length)
 
-    def Model_training_all(self, datapath, epoch = 100, batch_size = 8): #抽取全部数据训练
+    def Model_training_all(self, datapath, epoch = 10000, batch_Size = 8): #抽取全部数据训练
         '''
         训练模型
         参数：
@@ -110,22 +112,33 @@ class Acoustic_model(): #声学模型类
                 epoch:迭代轮数
         '''
         data_Counter = 1
-        data = Acoustic_data(datapath, 'train')
-        num_Data = data.Get_data_num()  #获取数据数量
+        #data = Acoustic_data(datapath, 'train')
+        data_gentator = DataGenerator(batch_Size = 8, data_Path = datapath, data_Type = 'train')
+        #data = data_gentator.acoustic_Data()
+        num_Data = data_gentator.list_Datas  #获取数据数量
         print("训练数据条数：%d"%num_Data)
-        for epoch in range(epoch):  #迭代次数
-            yield_Datas = data.Data_genetator_all(batch_size, self.AUDIO_LENGTH)
-            print('\n[running] train epoch %d .' % epoch)
-            while data_Counter*batch_size < num_Data:
-                try:
-                    self._model.fit_generator(yield_Datas, steps_per_epoch = 125)
-                except StopIteration:
-                    print('[error] generator error. Please check data format.')
-                    break
-                data_Counter += 1
-            self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + self.now_Time + '/',comment = 'e_' + str(epoch))
-            self.Test_model_all(self.datapath, str_Data = 'train', data_Count = 10)
-            self.Test_model_all(self.datapath, str_Data = 'cv', data_Count = 10)
+        try:
+            filepath = './acoustic_model/' + model_Name + self.now_Time + '/'
+            if not os.path.exists(filepath):
+                os.mkdir(filepath)
+            check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 0, save_best_only = False, save_weights_only = False, mode = 'auto', period = 1)
+            self._model.fit_generator(data_gentator, steps_per_epoch = 125, epochs = epoch, callbacks = [check_Point])
+        except StopIteration:
+            print('[error] generator error !')
+        self.Test_model_all(self.datapath, str_Data = 'test', data_Count = 100)
+        #for epoch in range(epoch):  #迭代次数
+            #yield_Datas = data.Data_genetator_all(batch_size, self.AUDIO_LENGTH)
+            #print('\n[running] train epoch %d .' % epoch)
+            #while data_Counter*batch_size < num_Data:
+            #    try:
+            #        self._model.fit_generator(yield_Datas, steps_per_epoch = 125)
+            #    except StopIteration:
+            #        print('[error] generator error. Please check data format.')
+            #        break
+            #    data_Counter += 1
+            #self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + self.now_Time + '/',comment = 'e_' + str(epoch))
+            #self.Test_model_all(self.datapath, str_Data = 'train', data_Count = 10)
+            #self.Test_model_all(self.datapath, str_Data = 'cv', data_Count = 10)
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
         if(not os.path.exists(filepath)):
@@ -138,7 +151,7 @@ class Acoustic_model(): #声学模型类
 
     def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
         self._model.load_weights(filename)
-        self.base_model.load_weights(filename + '.base')
+        #self.base_model.load_weights(filename + '.base')
 
     def Test_model_all(self, datapath = '', str_Data = 'cv', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         '''

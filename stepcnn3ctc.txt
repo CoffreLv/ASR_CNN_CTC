@@ -1,1 +1,1 @@
-acoustic_model/cnn3ctc20190315_1033/e_2
+acoustic_model/cnn3ctc20190328_0754/e_12

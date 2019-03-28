@@ -13,6 +13,8 @@ import tensorflow as tf
 from keras.backend.tensorflow_backend import set_session
 
 from acoustic_model import Acoustic_model
+import prepare_dataset
+import build_dataset
 
 datapath = 'dataset'
 modelpath = 'acoustic_model/'
@@ -20,5 +22,7 @@ modelpath = 'acoustic_model/'
 if (not os.path.exists(modelpath)): #创建模型存储目录
     os.makedirs(modelpath)
 
+prepare_dataset.Main_self('train', 'cv', 'test')
+build_dataset.Main_self()
 model_session = Acoustic_model(datapath)
 model_session.Model_training_all(datapath)
