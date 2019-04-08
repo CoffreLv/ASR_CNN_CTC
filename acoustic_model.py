@@ -1,7 +1,7 @@
-#!/usr/bin/python 
+#/usr/bin/python
 # ******************************************************
 # Author       : CoffreLv
-# Last modified:	2019-03-12 08:28
+# Last modified:	2019-03-29 08:50
 # Email        : coffrelv@163.com
 # Filename     :	acoustic_model.py
 # Description  :    声学模型类 
@@ -26,7 +26,6 @@ from get_feature import Acoustic_data
 from get_data_generation import DataGenerator
 abspath = ''
 model_Name = 'cnn3ctc'
-save_Model_counter = 0
 
 class Acoustic_model(): #声学模型类
     def __init__(self , datapath):
@@ -93,8 +92,6 @@ class Acoustic_model(): #声学模型类
         opt = Adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999, decay = 0.0, epsilon = 10e-8)
         model.compile(loss = {'ctc': lambda y_true, y_pre: y_pre}, optimizer = opt)
 
-        test_func = BK.function([input_data],[y_pre])
-
         print('[Info]创建编译模型成功')
         return model, model_data
 
@@ -111,34 +108,14 @@ class Acoustic_model(): #声学模型类
                 datapath:数据路径
                 epoch:迭代轮数
         '''
-        data_Counter = 1
-        #data = Acoustic_data(datapath, 'train')
-        data_gentator = DataGenerator(batch_Size = 8, data_Path = datapath, data_Type = 'train')
-        #data = data_gentator.acoustic_Data()
+        data_gentator = DataGenerator(batch_Size = batch_Size, data_Path = datapath, data_Type = 'train')
         num_Data = data_gentator.list_Datas  #获取数据数量
         print("训练数据条数：%d"%num_Data)
-        try:
-            filepath = './acoustic_model/' + model_Name + self.now_Time + '/'
-            if not os.path.exists(filepath):
-                os.mkdir(filepath)
-            check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 0, save_best_only = False, save_weights_only = False, mode = 'auto', period = 1)
-            self._model.fit_generator(data_gentator, steps_per_epoch = 125, epochs = epoch, callbacks = [check_Point])
-        except StopIteration:
-            print('[error] generator error !')
-        self.Test_model_all(self.datapath, str_Data = 'test', data_Count = 100)
-        #for epoch in range(epoch):  #迭代次数
-            #yield_Datas = data.Data_genetator_all(batch_size, self.AUDIO_LENGTH)
-            #print('\n[running] train epoch %d .' % epoch)
-            #while data_Counter*batch_size < num_Data:
-            #    try:
-            #        self._model.fit_generator(yield_Datas, steps_per_epoch = 125)
-            #    except StopIteration:
-            #        print('[error] generator error. Please check data format.')
-            #        break
-            #    data_Counter += 1
-            #self.Save_model(filepath = abspath + 'acoustic_model/' + model_Name + self.now_Time + '/',comment = 'e_' + str(epoch))
-            #self.Test_model_all(self.datapath, str_Data = 'train', data_Count = 10)
-            #self.Test_model_all(self.datapath, str_Data = 'cv', data_Count = 10)
+        filepath = './acoustic_model/' + model_Name + self.now_Time + '/'
+        if not os.path.exists(filepath):
+            os.mkdir(filepath)
+        check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 0, save_best_only = False, save_weights_only = False, mode = 'auto', period = 1)
+        self._model.fit_generator(data_gentator, steps_per_epoch = 125, epochs = epoch, callbacks = [check_Point])
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
         if(not os.path.exists(filepath)):
@@ -166,7 +143,6 @@ class Acoustic_model(): #声学模型类
         if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
             data_Count = num_Data
         try:
-            #random_Num = random.randint(0,num_Data - 1) # 获取一个随机数
             words_Num = 0
             word_Error_Num = 0
             nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
@@ -225,6 +201,40 @@ class Acoustic_model(): #声学模型类
                 f.close()
         except StopIteration:
             print('[Error] Model Test Error. please check data format.')
+
+    def Layer_output(self, datapath = '', str_Data = 'cv', data_Count = 1): #输出中间层特征
+        data = Acoustic_data(self.datapath , str_Data)
+        num_Data = data.Get_data_num() # 获取数据的数量
+        if(data_Count <= 0 or data_Count > num_Data): # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
+            data_Count = num_Data
+        for i in range(data_Count):
+            data_Input, data_Labels = data.Get_data_all( i )  # 从随机数开始连续向后取一定数量数据
+            # 数据格式出错处理 开始
+            # 当输入的wav文件长度过长时自动跳过该文件，转而使用下一个wav文件来运行
+            num_Bias = 0
+            while(data_Input.shape[0] > self.AUDIO_LENGTH):
+                print('*[Error]','wave data lenghth of num', str(i) , 'is too long.','\n A Exception raise when test Speech Model.')
+                num_Bias += 1
+                data_Input, data_Labels = data.Get_data(i + num_Bias)  # 从随机数开始连续向后取一定数量数据
+        batch_size = 1
+        in_len = np.zeros((batch_size),dtype = np.int32)
+        in_len[0] = data_Input.shape[0] // 8
+        x_in = np.zeros((batch_size, 1600, self.AUDIO_FEATURE_LENGTH, 1), dtype=np.float)
+        for i in range(batch_size):
+            x_in[i,0:len(data_Input)] = data_Input
+
+        num_Of_Layers = [1, 3, 4, 6, 8, 9, 11, 13, 14, 15, 17, 19, 20]
+        layers_Output = self.Get_mid_layer_output(x_in, num_Of_Layers) #定义层输出字典
+        return layers_Output
+
+    def Get_mid_layer_output(self, x_in, num_Of_Layers):
+        layers_Output = {}
+        for i in num_Of_Layers:
+            name_Of_Output_Layer = 'layer_' + str(i) + 'th_Output'
+            get_Layer_Output = BK.function([self.model.layers[0].input, BK.learning_phase()], [self.model.layers[i].output])
+            layers_Output[name_Of_Output_Layer] = get_Layer_Output([x_in, 0])[0]
+            print(layers_Output[name_Of_Output_Layer].shape)
+        return layers_Output
 
     def Predict(self, data_Input, input_len):
         '''
