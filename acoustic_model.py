@@ -223,17 +223,16 @@ class Acoustic_model(): #声学模型类
         for i in range(batch_size):
             x_in[i,0:len(data_Input)] = data_Input
 
-        num_Of_Layers = [1, 3, 4, 6, 8, 9, 11, 13, 14, 15, 17, 19, 20]
-        layers_Output = self.Get_mid_layer_output(x_in, num_Of_Layers) #定义层输出字典
+        layers_Output = self.Get_mid_layer_output(x_in) #定义层输出字典
         return layers_Output
 
-    def Get_mid_layer_output(self, x_in, num_Of_Layers):
+    def Get_mid_layer_output(self, x_in):
+        num_Of_Layers = len(self.model.layers) - 4  #减4是因为去掉了CTC和label,input_Length,label_length层
         layers_Output = {}
-        for i in num_Of_Layers:
-            name_Of_Output_Layer = 'layer_' + str(i) + 'th_Output'
+        for i in range(num_Of_Layers):
+            name_Of_Output_Layer = self.model.layers[i].name
             get_Layer_Output = BK.function([self.model.layers[0].input, BK.learning_phase()], [self.model.layers[i].output])
             layers_Output[name_Of_Output_Layer] = get_Layer_Output([x_in, 0])[0]
-            print(layers_Output[name_Of_Output_Layer].shape)
         return layers_Output
 
     def Predict(self, data_Input, input_len):

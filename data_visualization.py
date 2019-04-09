@@ -31,7 +31,6 @@ def Wav_signal_view( wav_Signal ):   #绘制二维矩阵可视化图像
     plt.figure('wav_Signal')
     plt.plot(x,y)
     plt.savefig('./doc/view/wav_Signal.jpg')
-    #plt.show()
 
 def Data_input_view(data_Input, name):
     data_Input = data_Input.flatten()
@@ -41,8 +40,10 @@ def Data_input_view(data_Input, name):
         x.append(i)
     plt.figure(name)
     plt.plot(x,data_Input)
-    plt.savefig('./doc/view/' + name + '.jpg')
-    #plt.show()
+    plt.savefig('./doc/view/' + name + '.eps')
+    plt.ion()
+    plt.pause(1)
+    plt.close(name)
 
 def Input_data_visualization(test_Num):
     data_Test = Acoustic_data(path = 'dataset',type = 'train')
@@ -76,23 +77,34 @@ def Input_data_visualization(test_Num):
     data_Input = np.log(data_Input +1)
     print(data_Input.shape)
     Data_input_view(tmp_1_Input, 'tmp_1_Input')
-    #plt.show()
     Data_input_view(tmp_2_Input, 'tmp_2_Input')
-    #plt.show()
     Data_input_view(tmp_3_Input, 'tmp_3_Input')
-    #plt.show()
     Data_input_view(data_Input, 'data_Input')
-    #plt.show()
     plt.ion()
     plt.pause(3)
     plt.close()
 
-def Layer_output_visualization():
+def Layer_output_visualization():   #网络中间层输出特征的可视化
     model_session = Acoustic_model(datapath)
     model_session.Load_Model(filename = './acoustic_model/cnn3ctc20190328_1851/e_346.model')
-    model_session.Layer_output(datapath = './dataset', str_Data = 'train', data_Count =  1)
+    layers_Output = model_session.Layer_output(datapath = './dataset', str_Data = 'train', data_Count =  1)
+    all_Layers_Name = layers_Output.keys()
+    print(all_Layers_Name)
+    the_Output_Layer = input("请输入要输出的网络中间层的名字：")
+    for key in layers_Output.keys():
+        test_Output = layers_Output[key]
+        print(test_Output.shape)
+        if key == the_Output_Layer:
+            tmp_Output = np.squeeze(test_Output).T
+            image_Tmp = []
+            for i in tmp_Output:
+                image_Tmp.append(i.T)
+                print((i.T).shape)
+                Data_input_view(i.T, key + str(len(image_Tmp)))
+            print(tmp_Output.shape)
+    return layers_Output
 
 if __name__ == '__main__':
-    test_Num = 1    #用于测试的数据编号
-    Input_data_visualization(test_Num)
-    Layer_output_visualization()
+    test_Num = 1    #用于测试输入数据可视化的数据编号
+    #Input_data_visualization(test_Num)
+    layers_Output = Layer_output_visualization()
