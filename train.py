@@ -19,6 +19,8 @@ import build_dataset
 datapath = 'dataset'
 modelpath = 'acoustic_model/'
 
+os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+
 if (not os.path.exists(modelpath)): #创建模型存储目录
     os.makedirs(modelpath)
 

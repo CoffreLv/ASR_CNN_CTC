@@ -142,7 +142,7 @@ class Acoustic_data():
             if (i != ''):
                 tmp = self.Symbol_to_num(i)
                 feat_Out.append(tmp)
-
+        print(filepath)
         data_Input = Get_frequecy_feature(wav_Signal, fs)
         data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
         data_Label = np.array(feat_Out)
@@ -242,6 +242,8 @@ def Get_frequecy_feature(wav_Signal, fs):
     wav_Length = wav_Array.shape[1]
 
     range_End = int(len(wav_Signal[0]) / fs * 1000 - time_Window) // 10 #计算循环终止的位置，也就是最终生成的窗数
+    if range_End < 0:
+        print(range_End)
     data_Input = np.zeros((range_End, 200), dtype = np.float)   #用于存放最终的频率特征数据
     data_Line = np.zeros((1, 400), dtype = np.float)
 

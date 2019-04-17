@@ -114,8 +114,9 @@ class Acoustic_model(): #声学模型类
         filepath = './acoustic_model/' + model_Name + self.now_Time + '/'
         if not os.path.exists(filepath):
             os.mkdir(filepath)
-        check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 0, save_best_only = False, save_weights_only = False, mode = 'auto', period = 1)
-        self._model.fit_generator(data_gentator, steps_per_epoch = 125, epochs = epoch, callbacks = [check_Point])
+        check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 0, save_best_only = False, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
+        early_Stopping = kr.callbacks.early_Stopping(monitor = 'val_loss', min_delta = 0, patience = 5, verbose = 1, mode = 'auto', baseline = None, restore_best_weights = False)  #在训练过程中monitor = val_loss值patience轮不下降 min_delta 停止训练
+        self._model.fit_generator(data_gentator, steps_per_epoch = 150, epochs = epoch, callbacks = [check_Point])
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
         if(not os.path.exists(filepath)):
@@ -128,7 +129,6 @@ class Acoustic_model(): #声学模型类
 
     def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
         self._model.load_weights(filename)
-        #self.base_model.load_weights(filename + '.base')
 
     def Test_model_all(self, datapath = '', str_Data = 'cv', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         '''
