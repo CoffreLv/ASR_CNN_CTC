@@ -47,6 +47,6 @@ def Main_self(Train_signal,Test_signal, dev_Signal):
 if __name__ == '__main__':
     Train_signal = 'train'
     Test_signal = 'test'
-    dev_Signal = 'cv'
+    dev_Signal = 'dev'
     Main_self(Train_signal, Test_signal, dev_Signal)
     exit()

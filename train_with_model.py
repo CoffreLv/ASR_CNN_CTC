@@ -12,5 +12,5 @@ import acoustic_model
 datapath = 'dataset'
 
 session_hand = acoustic_model.Acoustic_model(datapath)
-session_hand.Load_Model(filename = './acoustic_model/cnn3ctc20190412_0819/e_1035.model')
+session_hand.Load_Model(filename = './acoustic_model/cnn3ctc20190425_0843/e_40.model')
 session_hand.Model_training_all(datapath)

@@ -61,9 +61,9 @@ class Acoustic_data():
         if(self.type == 'train'):
             filename_Wavlist = 'text' + self.slash + 'train.wav.lst'
             filename_Symbollist = 'text' + self.slash + 'train.syllable.txt'
-        elif(self.type == 'cv'):
-            filename_Wavlist = 'text' + self.slash + 'cv.wav.lst'
-            filename_Symbollist = 'text' + self.slash + 'cv.syllable.txt'
+        elif(self.type == 'dev'):
+            filename_Wavlist = 'text' + self.slash + 'dev.wav.lst'
+            filename_Symbollist = 'text' + self.slash + 'dev.syllable.txt'
         elif(self.type == 'test'):
             filename_Wavlist = 'text' + self.slash + 'test.wav.lst'
             filename_Symbollist = 'text' + self.slash + 'test.syllable.txt'
@@ -142,7 +142,7 @@ class Acoustic_data():
             if (i != ''):
                 tmp = self.Symbol_to_num(i)
                 feat_Out.append(tmp)
-        print(filepath)
+        #print(filepath)
         data_Input = Get_frequecy_feature(wav_Signal, fs)
         data_Input = data_Input.reshape(data_Input.shape[0], data_Input.shape[1], 1)
         data_Label = np.array(feat_Out)

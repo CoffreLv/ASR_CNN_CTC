@@ -64,7 +64,7 @@ def Get_and_test_the_wav_params(Wav_path):
 def Main_self():
     Get_every_text('train')
     Get_every_text('test')
-    Get_every_text('cv')
+    Get_every_text('dev')
 
 if __name__ == '__main__':
     Main_self()
