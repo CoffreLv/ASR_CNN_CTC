@@ -116,7 +116,7 @@ class Acoustic_model(): #声学模型类
             os.mkdir(filepath)
         check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
         early_Stopping = kr.callbacks.EarlyStopping(monitor = 'val_loss', min_delta = 0, patience = 15, verbose = 1, mode = 'auto')  #在训练过程中monitor = val_loss值patience轮不下降 min_delta 停止训练
-        self._model.fit_generator(data_gentator, steps_per_epoch = 150, epochs = epoch, callbacks = [check_Point, early_Stopping], validation_data = validation_Data_Gentator)
+        self._model.fit_generator(data_gentator, steps_per_epoch = 900, epochs = epoch, callbacks = [check_Point, early_Stopping], validation_data = validation_Data_Gentator)
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
         if(not os.path.exists(filepath)):
