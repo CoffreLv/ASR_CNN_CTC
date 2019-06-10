@@ -12,5 +12,5 @@ from acoustic_model import Acoustic_model
 datapath = 'dataset'
 
 model_session = Acoustic_model(datapath)
-model_session.Load_Model(filename = './acoustic_model/cnn3ctc20190425_1619/e_11.model')
-model_session.Test_model_all(datapath = './dataset', str_Data = 'test', data_Count =  200)
+model_session.Load_Model(filename = './acoustic_model/cnn3ctc20190530_1449/e_32.model')
+model_session.Test_model_all(datapath = './dataset', str_Data = 'train', data_Count =  600)

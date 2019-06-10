@@ -35,6 +35,7 @@ class Acoustic_model(): #声学模型类
         MS_OUTPUT_SIZE = 973
         self.MS_OUTPUT_SIZE = MS_OUTPUT_SIZE    #模型最终输出的维度大小
         self.label_max_length = 64  #？？？
+        #self.label_max_length = 128  #？？？
         self.AUDIO_LENGTH = 1600    #一次送入的特征个数
         self.AUDIO_FEATURE_LENGTH = 200 #每个特征的维度
         self._model, self.base_model = self.Create_model()  #建立模型并返回模型
@@ -109,11 +110,17 @@ class Acoustic_model(): #声学模型类
         '''
         data_gentator = DataGenerator(batch_Size = batch_Size, data_Path = datapath, data_Type = 'train')   #生成训练数据迭代器
         validation_Data_Gentator = DataGenerator(batch_Size = batch_Size, data_Path = datapath, data_Type = 'dev')  #生成验证数据迭代器
+        num_Data_Dev = validation_Data_Gentator.list_Datas  #获取验证集数量
         num_Data = data_gentator.list_Datas  #获取数据数量
         print("训练数据条数：%d"%num_Data)
         filepath = './acoustic_model/' + model_Name + self.now_Time + '/'
         if not os.path.exists(filepath):
             os.mkdir(filepath)
+        f_training = open(filepath + 'training_information.txt', mode = 'w', encoding = 'utf-8')    #训练信息留存
+        f_training.write("训练数据条数：" + str(num_Data) + '\n')
+        f_training.write("验证数据条数：" + str(num_Data_Dev) + '\n')
+        f_training.write("网络结构：" + str(self.model.layers) + '\n')
+        f_training.close()
         #check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
         #early_Stopping = kr.callbacks.EarlyStopping(monitor = 'val_loss', min_delta = 0, patience = 15, verbose = 1, mode = 'auto')  #在训练过程中monitor = val_loss值patience轮不下降 min_delta 停止训练
         check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
@@ -131,6 +138,9 @@ class Acoustic_model(): #声学模型类
 
     def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
         self._model.load_weights(filename)
+        f_training = open(filepath + 'load_model_information.txt', mode = 'w', encoding = 'utf-8')    #载入模型信息留存
+        f_training.write("载入模型路径：" + filename + '\n')
+        f_training.close()
 
     def Test_model_all(self, datapath = '', str_Data = 'dev', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         #测试检验模型效果

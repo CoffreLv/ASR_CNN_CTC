@@ -7,10 +7,10 @@
 # Description  : 
 # ******************************************************
 
-import acoustic_model
+import acoustic_model_translation
 
 datapath = 'dataset'
 
-session_hand = acoustic_model.Acoustic_model(datapath)
-session_hand.Load_Model(filename = './acoustic_model/cnn3ctc20190530_2150/e_118.model')
+session_hand = acoustic_model_translation.Acoustic_model(datapath)
+session_hand.Load_Model(filename = './acoustic_model/e_27.model')
 session_hand.Model_training_all(datapath)

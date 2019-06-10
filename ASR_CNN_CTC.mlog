@@ -5,6 +5,11 @@
 # Filename     :	ASR_CNN_CTC.mlog
 # Description  : ASR_CNN_CTC的实现日志
 # ******************************************************
+# 2019-06-10
+添加训练数据集及模型信息留存代码，方便实验结果分析
+
+# 2019-05-30
+复制acoustic_model到acoustic_model_translation，添加迁移模型部分代码，准备迁移学习实验
 
 # 2019-04-22
 复制acoustic_model到acoustic_model_val，在训练过程中检测到val_loss不下降后停止训练

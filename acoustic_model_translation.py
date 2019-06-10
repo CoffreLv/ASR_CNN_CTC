@@ -35,6 +35,7 @@ class Acoustic_model(): #声学模型类
         MS_OUTPUT_SIZE = 973
         self.MS_OUTPUT_SIZE = MS_OUTPUT_SIZE    #模型最终输出的维度大小
         self.label_max_length = 64  #？？？
+        #self.label_max_length = 128  #？？？
         self.AUDIO_LENGTH = 1600    #一次送入的特征个数
         self.AUDIO_FEATURE_LENGTH = 200 #每个特征的维度
         self._model, self.base_model = self.Create_model()  #建立模型并返回模型
@@ -56,28 +57,31 @@ class Acoustic_model(): #声学模型类
 
         input_data = Input(name = 'the_input', shape = (self.AUDIO_LENGTH, self.AUDIO_FEATURE_LENGTH,1))
 
-        layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input_data)  #卷积层1
+        layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_1')(input_data)  #卷积层1
         layer_c1 = Dropout(0.05)(layer_c1)   #为卷积层1添加Dropout
-        layer_c2 = Conv2D(32, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c1)    #卷积层2
-        layer_p3 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c2) #池化层3
+        layer_c2 = Conv2D(32, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_2')(layer_c1)    #卷积层2
+        layer_p3 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid', name = 'max_pooling2d_1_tr')(layer_c2) #池化层3
         layer_p3 = Dropout(0.05)(layer_p3)
-        layer_c4 = Conv2D(64, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p3)    #卷积层4
+        layer_c4 = Conv2D(64, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_3')(layer_p3)    #卷积层4
         layer_c4 = Dropout(0.1)(layer_c4)   #为卷积层4添加Dropout
-        layer_c5 = Conv2D(64, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c4)    #卷积层5
-        layer_p6 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c5) #池化层6
+        layer_c5 = Conv2D(64, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_4')(layer_c4)    #卷积层5
+        layer_p6 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid', name = 'max_pooling2d_2_tr')(layer_c5) #池化层6
         layer_p6 = Dropout(0.1)(layer_p6)
-        layer_c7 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p6)    #卷积层7
+        layer_c7 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_5_tr')(layer_p6)    #卷积层7
+        #layer_c7 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_5')(layer_p6)    #卷积层7
         layer_c7 = Dropout(0.15)(layer_c7)   #为卷积层7添加Dropout
-        layer_c8 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c7)    #卷积层8
-        layer_p9 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c8) #池化层9
+        layer_c8 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_6_tr')(layer_c7)    #卷积层8
+        #layer_c8 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal', name = 'conv2d_6')(layer_c7)    #卷积层8
+        layer_p9 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid', name = 'max_pooling2d_3_tr')(layer_c8) #池化层9
         #修改音频长度需要对应修改
-        layer_f10 = Reshape((200, 3200))(layer_p9)  #Reshape层10
+        layer_f10 = Reshape((200, 3200),name = 'reshape_1')(layer_p9)  #Reshape层10
         layer_f10 = Dropout(0.2)(layer_f10)
         layer_f11 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f10)    #全连接层11
         layer_f11 = Dropout(0.3)(layer_f11)
-        layer_fu12 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f11)
+        #layer_fu12 = Dense(1424 , use_bias = True, kernel_initializer = 'he_normal')(layer_f11)
+        layer_fu12_tr = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal', name = 'dense_2_tr')(layer_f11)
 ################################################################################################
-        y_pre = Activation('softmax', name = 'Activation0')(layer_fu12)
+        y_pre = Activation('softmax', name = 'Activation0')(layer_fu12_tr)
         model_data = Model(inputs = input_data, output = y_pre)
 
         labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
@@ -110,19 +114,14 @@ class Acoustic_model(): #声学模型类
         data_gentator = DataGenerator(batch_Size = batch_Size, data_Path = datapath, data_Type = 'train')   #生成训练数据迭代器
         validation_Data_Gentator = DataGenerator(batch_Size = batch_Size, data_Path = datapath, data_Type = 'dev')  #生成验证数据迭代器
         num_Data = data_gentator.list_Datas  #获取数据数量
-        num_Data_Dev = validation_Data_Gentator.list_Datas  #获取验证集数量
         print("训练数据条数：%d"%num_Data)
         filepath = './acoustic_model/' + model_Name + self.now_Time + '/'
         if not os.path.exists(filepath):
             os.mkdir(filepath)
-        f_training = open(filepath + 'training_information.txt', mode = 'w', encoding = 'utf-8')    #训练信息留存
-        f_training.write("训练数据条数：" + str(num_Data) + '\n')
-        f_training.write("验证数据条数：" + str(num_Data_Dev) + '\n')
-        layers_Name = self.Get_layers_name()
-        f_training.write("网络结构：" + str(layers_Name) + '\n')
-        f_training.close()
-        check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
-        early_Stopping = kr.callbacks.EarlyStopping(monitor = 'val_loss', min_delta = 0, patience = 15, verbose = 1, mode = 'auto')  #在训练过程中monitor = val_loss值patience轮不下降 min_delta 停止训练
+        #check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'val_loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
+        #early_Stopping = kr.callbacks.EarlyStopping(monitor = 'val_loss', min_delta = 0, patience = 15, verbose = 1, mode = 'auto')  #在训练过程中monitor = val_loss值patience轮不下降 min_delta 停止训练
+        check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
+        early_Stopping = kr.callbacks.EarlyStopping(monitor = 'loss', min_delta = 0, patience = 10, verbose = 1, mode = 'auto')  #在训练过程中monitor = loss值patience轮不下降 min_delta 停止训练
         self._model.fit_generator(data_gentator, steps_per_epoch = 900, epochs = epoch, callbacks = [check_Point, early_Stopping], validation_data = validation_Data_Gentator)
 
     def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
@@ -135,7 +134,7 @@ class Acoustic_model(): #声学模型类
         f.close()
 
     def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
-        self._model.load_weights(filename)
+        self._model.load_weights(filename, by_name = True)
 
     def Test_model_all(self, datapath = '', str_Data = 'dev', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         #测试检验模型效果
@@ -228,18 +227,21 @@ class Acoustic_model(): #声学模型类
         return layers_Output
 
     def Get_mid_layer_output(self, x_in):
-        name_Of_Output_Layer = self.Get_layers_name()
-        for i in range(name_Of_Output_Layer):
+        num_Of_Layers = len(self.model.layers) - 4  #减4是因为去掉了CTC和label,input_Length,label_length层
+        layers_Output = {}
+        for i in range(num_Of_Layers):
+            name_Of_Output_Layer = self.model.layers[i].name
             get_Layer_Output = BK.function([self.model.layers[0].input, BK.learning_phase()], [self.model.layers[i].output])
             layers_Output[name_Of_Output_Layer] = get_Layer_Output([x_in, 0])[0]
         return layers_Output
 
-    def Get_layers_name(self):
-        num_Of_Layers = len(self.model.layers)
-        name_Of_Output_Layer = []
+    def Print_layer_name(self):
+        num_Of_Layers = len(self.model.layers) - 4  #减4是因为去掉了CTC和label,input_Length,label_length层
+        layers_Output = {}
         for i in range(num_Of_Layers):
-            name_Of_Output_Layer.append(self.model.layers[i].name)
-        return name_Of_Output_Layer
+            name_Of_Output_Layer = self.model.layers[i].name
+            print(name_Of_Output_Layer)
+        return layers_Output
 
     def Predict(self, data_Input, input_len):
         '''
