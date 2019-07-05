@@ -18,7 +18,7 @@ import read_config
 #将所有训练所需语料相关数据收集并存储
 def Get_all_text_data(Sign):
     Wav_path = read_config.Read_config('doc/config.cfg', 'section1', Sign+'_wav_path')
-    f = open('doc/'+Sign+'all_text.txt' , mode = 'w' , encoding = 'utf-8')
+    f = open('doc/'+Sign+'_all_text.txt' , mode = 'w' , encoding = 'utf-8')
     Filenamelist = []
     for parent, dirname , filenames in os.walk(Wav_path, topdown = True):
         for filename in filenames:
@@ -28,14 +28,14 @@ def Get_all_text_data(Sign):
                 file_path = os.path.join(parent, filename)
                 Filenamelist.append(file_path)
         Filenamelist.sort()
-        num = 1
-        for i in Filenamelist:
-            f_txt = open(i[:-4]+'.txt', mode = 'r', encoding = 'utf-8')
-            wav_txt = f_txt.readline()
-            wav_txt = re.sub('[^a-zA-Z ]','',wav_txt)
-            wav_txt = wav_txt.strip()
-            f.write(i[-13:-4]+'_'+i[-22:-14]+' '+i+' '+wav_txt+"\n")
-            num += 1
+    num = 1
+    for i in Filenamelist:
+        f_txt = open(i[:-4]+'.txt', mode = 'r', encoding = 'utf-8')
+        wav_txt = f_txt.readline()
+        wav_txt = re.sub('[^a-zA-Z ]','',wav_txt)
+        wav_txt = wav_txt.strip()
+        f.write(i[-13:-4]+'_'+i[-22:-14]+' '+i+' '+wav_txt+"\n")
+        num += 1
     f.close()
 
 #本脚本主函数

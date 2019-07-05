@@ -18,7 +18,7 @@ import prepare_dataset
 #根据（sign）all_text.txt获得所有text、utt2spk、wav.scp三个文档
 def Get_every_text(sign):
     All_text = []
-    f_all =  open('./doc/'+sign+'all_text.txt', mode = 'r', encoding = 'utf-8')
+    f_all =  open('./doc/'+sign+'_all_text.txt', mode = 'r', encoding = 'utf-8')
     for alltext in f_all:
         if alltext[:3]==codecs.BOM_UTF8:
             alltext = alltext[3:]

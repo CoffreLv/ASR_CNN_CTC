@@ -45,40 +45,19 @@ class Acoustic_model(): #声学模型类
         self.datapath = self.datapath + self.slash
         self.now_Time = time.strftime('%Y%m%d_%H%M', time.localtime(time.time()))
 
-    def Create_model(self): #卷积层*6
-        '''
-        定义模型，使用函数式模型
-        输入层：200维的特征值序列，一条语音数据的最大长度设为1600（大约16s）
-        隐藏层：卷积池化层，卷积核大小维3*3，池化窗口大小为2
-        隐藏层：全连接层
-        输出层：全连接层，神经元数量为self.MS_OUTPUT_SIZE,使用softmax作为激活函数
-        CTC层：使用CTC的loss作为损失函数，实现连接性时序多输出
-        '''
-
+    def Create_model(self): #卷积层*3
         input_data = Input(name = 'the_input', shape = (self.AUDIO_LENGTH, self.AUDIO_FEATURE_LENGTH,1))
 
         layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input_data)  #卷积层1
         layer_c1 = Dropout(0.05)(layer_c1)   #为卷积层1添加Dropout
-        layer_c2 = Conv2D(32, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c1)    #卷积层2
-        layer_p3 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c2) #池化层3
-        layer_p3 = Dropout(0.05)(layer_p3)
-        layer_c4 = Conv2D(64, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p3)    #卷积层4
-        layer_c4 = Dropout(0.1)(layer_c4)   #为卷积层4添加Dropout
-        layer_c5 = Conv2D(64, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c4)    #卷积层5
-        layer_p6 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c5) #池化层6
-        layer_p6 = Dropout(0.1)(layer_p6)
-        layer_c7 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p6)    #卷积层7
-        layer_c7 = Dropout(0.15)(layer_c7)   #为卷积层7添加Dropout
-        layer_c8 = Conv2D(128, (3, 3), use_bias = True, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c7)    #卷积层8
-        layer_p9 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c8) #池化层9
+        layer_c2 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c1)  #卷积层2
         #修改音频长度需要对应修改
-        layer_f10 = Reshape((200, 3200))(layer_p9)  #Reshape层10
-        layer_f10 = Dropout(0.2)(layer_f10)
-        layer_f11 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f10)    #全连接层11
-        layer_f11 = Dropout(0.3)(layer_f11)
-        layer_fu12 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f11)
-################################################################################################
-        y_pre = Activation('softmax', name = 'Activation0')(layer_fu12)
+        layer_f7 = Reshape((200, 51200))(layer_c2)  #Reshape
+        layer_f7 = Dropout(0.2)(layer_f7)
+        layer_f8 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f7)    #全连接层8
+        layer_f8 = Dropout(0.3)(layer_f8)
+        layer_fu9 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f8)
+        y_pre = Activation('softmax', name = 'Activation0')(layer_fu9)
         model_data = Model(inputs = input_data, output = y_pre)
 
         labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
@@ -127,22 +106,16 @@ class Acoustic_model(): #声学模型类
         early_Stopping = kr.callbacks.EarlyStopping(monitor = 'loss', min_delta = 0, patience = 10, verbose = 1, mode = 'auto')  #在训练过程中monitor = loss值patience轮不下降 min_delta 停止训练
         self._model.fit_generator(data_gentator, steps_per_epoch = 900, epochs = epoch, callbacks = [check_Point, early_Stopping], validation_data = validation_Data_Gentator)
 
-    def Save_model(self, filepath = abspath + 'acoustic_model/' + model_Name , comment = ''):   #保存模型参数
-        if(not os.path.exists(filepath)):
-            os.makedirs(filepath)
-        self._model.save_weights(filepath + comment +'.model')
-        self.base_model.save_weights(filepath + comment + '.model.base')
-        f = open('step' + model_Name + '.txt', 'w',encoding = 'utf-8')
-        f.write(filepath + comment)
-        f.close()
-
     def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
         self._model.load_weights(filename)
+        file_Path = filename.split('/')
+        filepath = '/'.join(file_Path[:-1]) + '/'
+        print(filepath)
         f_training = open(filepath + 'load_model_information.txt', mode = 'w', encoding = 'utf-8')    #载入模型信息留存
         f_training.write("载入模型路径：" + filename + '\n')
         f_training.close()
 
-    def Test_model_all(self, datapath = '', str_Data = 'dev', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
+    def Test_model_all(self, modelpath , datapath = '', str_Data = 'dev', data_Count = 100, out_Report = True, show_Ratio = True, io_Step_Print = 10, io_Step_File = 10):
         #测试检验模型效果
         data = Acoustic_data(self.datapath , str_Data)
         num_Data = data.Get_data_num() # 获取数据的数量
@@ -153,7 +126,7 @@ class Acoustic_model(): #声学模型类
             word_Error_Num = 0
             nowtime = time.strftime('%Y%m%d_%H%M%S',time.localtime(time.time()))
             if(out_Report == True):
-                logpath = './doc/Test_Log_' + str_Data + '/' + self.now_Time +'/'
+                logpath = modelpath + '_' + str_Data + '/'
                 if not os.path.exists(logpath):
                     os.mkdir(logpath)
                 f = open(logpath + nowtime + '.txt', 'w', encoding='UTF-8') # 打开文件并读入

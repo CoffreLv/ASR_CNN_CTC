@@ -7,6 +7,121 @@
 # Description  :    声学模型类 
 # ******************************************************
 
+'''
+修改模型需要对应修改的各个位置：
+(1)根据池化层数和每层的pool_size设置：
+    <1>get_feature.Data_genetator_all()
+        input_Length.append(data_Input.shape[0] // 8 + data_Input.shape[0] %8)  中的8
+    <2>get_data_generation.__data_generation()
+        input_Length.append(data_Input.shape[0] // 8 + data_Input.shape[0] % 8) 中的8
+
+(2)修改输入维度需要修改：
+    <1>acoustic_model.Acoustic_model()
+        self.label_max_length
+        self.AUDIO_LENGTH
+        Reshape层维度
+    <2>get_feature.Data_genetator_all()
+        audio_length
+
+(3)修改特征维度需要修改
+    <1>get_feature.Get_frequecy_feature()
+    <2>get_feature.Data_genetator_all()
+    <3>汉明窗
+    <4>self.AUDIO_FEATURE_LENGTH
+    <5>Reshape?
+
+(4)Reshape层维度
+    计算方式，n×m = 输入n×m×上一层卷积核数
+'''
+
+#一层卷积层
+    def Create_model(self): #卷积层*3
+        input_data = Input(name = 'the_input', shape = (self.AUDIO_LENGTH, self.AUDIO_FEATURE_LENGTH,1))
+
+        layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input_data)  #卷积层1
+        layer_c1 = Dropout(0.05)(layer_c1)   #为卷积层1添加Dropout
+        #修改音频长度需要对应修改
+        layer_f7 = Reshape((200, 3200))(layer_c1)  #Reshape
+        layer_f7 = Dropout(0.2)(layer_f7)
+        layer_f8 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f7)    #全连接层8
+        layer_f8 = Dropout(0.3)(layer_f8)
+        layer_fu9 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f8)
+        y_pre = Activation('softmax', name = 'Activation0')(layer_fu9)
+        model_data = Model(inputs = input_data, output = y_pre)
+
+        labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
+        input_length = Input(name = 'input_length', shape = [1], dtype = 'int64')
+        label_length = Input(name = 'label_length', shape = [1], dtype = 'int64')
+
+        loss_out = Lambda(self.ctc_lambda_func, output_shape = (1, ), name = 'ctc')([y_pre,labels, input_length, label_length])
+
+        model = Model(inputs = [input_data, labels, input_length, label_length], output = loss_out)
+        model.summary()
+        opt = Adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999, decay = 0.0, epsilon = 10e-8)
+        model.compile(loss = {'ctc': lambda y_true, y_pre: y_pre}, optimizer = opt)
+
+        print('[Info]创建编译模型成功')
+        return model, model_data
+
+#二层卷积层
+    def Create_model(self): #卷积层*3
+        input_data = Input(name = 'the_input', shape = (self.AUDIO_LENGTH, self.AUDIO_FEATURE_LENGTH,1))
+
+        layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input_data)  #卷积层1
+        layer_c1 = Dropout(0.05)(layer_c1)   #为卷积层1添加Dropout
+        layer_c2 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c1)  #卷积层2
+        #修改音频长度需要对应修改
+        layer_f7 = Reshape((200, 3200))(layer_c1)  #Reshape
+        layer_f7 = Dropout(0.2)(layer_f7)
+        layer_f8 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f7)    #全连接层8
+        layer_f8 = Dropout(0.3)(layer_f8)
+        layer_fu9 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f8)
+        y_pre = Activation('softmax', name = 'Activation0')(layer_fu9)
+        model_data = Model(inputs = input_data, output = y_pre)
+
+        labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
+        input_length = Input(name = 'input_length', shape = [1], dtype = 'int64')
+        label_length = Input(name = 'label_length', shape = [1], dtype = 'int64')
+
+        loss_out = Lambda(self.ctc_lambda_func, output_shape = (1, ), name = 'ctc')([y_pre,labels, input_length, label_length])
+
+        model = Model(inputs = [input_data, labels, input_length, label_length], output = loss_out)
+        model.summary()
+        opt = Adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999, decay = 0.0, epsilon = 10e-8)
+        model.compile(loss = {'ctc': lambda y_true, y_pre: y_pre}, optimizer = opt)
+
+        print('[Info]创建编译模型成功')
+
+#一层卷积层
+    def Create_model(self): #卷积层*3
+        input_data = Input(name = 'the_input', shape = (self.AUDIO_LENGTH, self.AUDIO_FEATURE_LENGTH,1))
+
+        layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input_data)  #卷积层1
+        layer_c1 = Dropout(0.05)(layer_c1)   #为卷积层1添加Dropout
+        layer_c2 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c1)  #卷积层1
+        #修改音频长度需要对应修改
+        layer_f7 = Reshape((200, 3200))(layer_c2)  #Reshape
+        layer_f7 = Dropout(0.2)(layer_f7)
+        layer_f8 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f7)    #全连接层8
+        layer_f8 = Dropout(0.3)(layer_f8)
+        layer_fu9 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f8)
+        y_pre = Activation('softmax', name = 'Activation0')(layer_fu9)
+        model_data = Model(inputs = input_data, output = y_pre)
+
+        labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
+        input_length = Input(name = 'input_length', shape = [1], dtype = 'int64')
+        label_length = Input(name = 'label_length', shape = [1], dtype = 'int64')
+
+        loss_out = Lambda(self.ctc_lambda_func, output_shape = (1, ), name = 'ctc')([y_pre,labels, input_length, label_length])
+
+        model = Model(inputs = [input_data, labels, input_length, label_length], output = loss_out)
+        model.summary()
+        opt = Adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999, decay = 0.0, epsilon = 10e-8)
+        model.compile(loss = {'ctc': lambda y_true, y_pre: y_pre}, optimizer = opt)
+
+        print('[Info]创建编译模型成功')
+        return model, model_data
+
     def Create_model(self): #卷积层*3
         '''
         定义模型，使用函数式模型
