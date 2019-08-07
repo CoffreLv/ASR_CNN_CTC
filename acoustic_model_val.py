@@ -54,7 +54,7 @@ class Acoustic_model(): #声学模型类
         layer_c2 = Dropout(0.1)(layer_c1)
         layer_p1 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c2)
         layer_p1 = Dropout(0.1)(layer_p1)
-        layer_c3 = Conv2D(64, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(p1)  #卷积层1
+        layer_c3 = Conv2D(64, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p1)  #卷积层1
         layer_c3 = Dropout(0.2)(layer_c3)   #为卷积层1添加Dropout
         layer_c4 = Conv2D(64, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c3)  #卷积层2
         layer_c4 = Dropout(0.2)(layer_c4)
@@ -73,7 +73,7 @@ class Acoustic_model(): #声学模型类
         layer_p4 = MaxPooling2D(pool_size = 1, strides = None, padding = 'valid')(layer_c8)
         #layer_p1 = Dropout(0.1)(layer_p1)
         #修改音频长度需要对应修改
-        layer_f7 = Reshape((200, 51200))(layer_p4)  #Reshape
+        layer_f7 = Reshape((200, 3200))(layer_p4)  #Reshape
         layer_f7 = Dropout(0.2)(layer_f7)
         layer_f8 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f7)    #全连接层8
         layer_f8 = Dropout(0.3)(layer_f8)
