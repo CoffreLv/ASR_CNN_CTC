@@ -10,7 +10,7 @@
 from acoustic_model import Acoustic_model
 
 datapath = 'dataset'
-model_Path = './acoustic_model/cnn3ctc20190710_0815/e_84.model'
+model_Path = './acoustic_model/cnn3ctc20190917_1734/e_44.model'
 model_session = Acoustic_model(datapath)
 model_session.Load_Model(filename = model_Path)
-model_session.Test_model_all(modelpath = model_Path, datapath = './dataset', str_Data = 'dev', data_Count = 500 )
+model_session.Test_model_all(modelpath = model_Path, datapath = './dataset', str_Data = 'train', data_Count = 500 )

@@ -47,38 +47,48 @@ class Acoustic_model(): #声学模型类
 
     def Create_model(self): #卷积层*3
         input_data = Input(name = 'the_input', shape = (self.AUDIO_LENGTH, self.AUDIO_FEATURE_LENGTH,1))
-
         layer_c1 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(input_data)  #卷积层1
         layer_c1 = Dropout(0.05)(layer_c1)   #为卷积层1添加Dropout
         layer_c2 = Conv2D(32, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c1)  #卷积层2
-        #layer_c2 = Dropout(0.1)(layer_c1)
         layer_p1 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c2)
         layer_p1 = Dropout(0.05)(layer_p1)
+
         layer_c3 = Conv2D(64, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p1)  #卷积层1
         layer_c3 = Dropout(0.1)(layer_c3)   #为卷积层1添加Dropout
         layer_c4 = Conv2D(64, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c3)  #卷积层2
-        #layer_c4 = Dropout(0.2)(layer_c4)
         layer_p2 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c4)
         layer_p2 = Dropout(0.1)(layer_p2)
+
         layer_c5 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p2)  #卷积层1
         layer_c5 = Dropout(0.15)(layer_c5)   #为卷积层1添加Dropout
         layer_c6 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c5)  #卷积层2
-        #layer_c6 = Dropout(0.3)(layer_c6)
         layer_p3 = MaxPooling2D(pool_size = 2, strides = None, padding = 'valid')(layer_c6)
         layer_p3 = Dropout(0.15)(layer_p3)
+
         layer_c7 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p3)  #卷积层1
         layer_c7 = Dropout(0.2)(layer_c7)   #为卷积层1添加Dropout
         layer_c8 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c7)  #卷积层2
-        #layer_c8 = Dropout(0.5)(layer_c8)
         layer_p4 = MaxPooling2D(pool_size = 1, strides = None, padding = 'valid')(layer_c8)
         layer_p4 = Dropout(0.2)(layer_p4)
-        #修改音频长度需要对应修改
-        layer_f7 = Reshape((200, 3200))(layer_p4)  #Reshape
-        layer_f7 = Dropout(0.3)(layer_f7)
+
+        layer_c9 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p4)  #卷积层1
+        layer_c9 = Dropout(0.3)(layer_c9)   #为卷积层1添加Dropout
+        layer_c10 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c9)  #卷积层2
+        layer_p5 = MaxPooling2D(pool_size = 1, strides = None, padding = 'valid')(layer_c10)
+        layer_p5 = Dropout(0.3)(layer_p5)
+
+        layer_c11 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_p5)  #卷积层1
+        layer_c11 = Dropout(0.4)(layer_c11)   #为卷积层1添加Dropout
+        layer_c12 = Conv2D(128, (3, 3), use_bias = False, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(layer_c11)  #卷积层2
+        layer_p6 = MaxPooling2D(pool_size = 1, strides = None, padding = 'valid')(layer_c12)
+        layer_p6 = Dropout(0.4)(layer_p6)
+
+        layer_f7 = Reshape((200, 3200))(layer_p6)  #Reshape#修改输入维度需要对应修改
+        layer_f7 = Dropout(0.2)(layer_f7)
         layer_f8 = Dense(128, activation = 'relu', use_bias = True, kernel_initializer = 'he_normal')(layer_f7)    #全连接层8
         layer_f8 = Dropout(0.3)(layer_f8)
-        layer_fu9 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f8)
-        y_pre = Activation('softmax', name = 'Activation0')(layer_fu9)
+        layer_f9 = Dense(self.MS_OUTPUT_SIZE, use_bias = True, kernel_initializer = 'he_normal')(layer_f8)
+        y_pre = Activation('softmax', name = 'Activation')(layer_f9)
         model_data = Model(inputs = input_data, output = y_pre)
 
         labels = Input(name = 'the_labels', shape = [self.label_max_length], dtype = 'float32')
@@ -92,7 +102,7 @@ class Acoustic_model(): #声学模型类
         opt = Adam(lr = 0.001, beta_1 = 0.9, beta_2 = 0.999, decay = 0.0, epsilon = 10e-8)
         model.compile(loss = {'ctc': lambda y_true, y_pre: y_pre}, optimizer = opt)
 
-        print('[Info]creat model success!')
+        print('[Info]创建编译模型成功')
         return model, model_data
 
     def ctc_lambda_func(self, args):
@@ -125,14 +135,14 @@ class Acoustic_model(): #声学模型类
         #early_Stopping = kr.callbacks.EarlyStopping(monitor = 'val_loss', min_delta = 0, patience = 15, verbose = 1, mode = 'auto')  #在训练过程中monitor = val_loss值patience轮不下降 min_delta 停止训练
         check_Point = kr.callbacks.ModelCheckpoint(filepath + 'e_{epoch:02d}.model', monitor = 'loss', verbose = 2, save_best_only = True, save_weights_only = False, mode = 'auto', period = 1)  #每个epoch保存模型
         early_Stopping = kr.callbacks.EarlyStopping(monitor = 'loss', min_delta = 0, patience = 10, verbose = 1, mode = 'auto')  #在训练过程中monitor = loss值patience轮不下降 min_delta 停止训练
-        self._model.fit_generator(data_gentator, steps_per_epoch = 900, epochs = epoch, callbacks = [check_Point, early_Stopping], validation_data = validation_Data_Gentator)
+        self._model.fit_generator(data_gentator, steps_per_epoch = 700, epochs = epoch, callbacks = [check_Point, early_Stopping], validation_data = validation_Data_Gentator)
 
     def Load_Model(self, filename = abspath + 'acoustic_model/' + model_Name , comment = ''):   #加载模型参数
         self._model.load_weights(filename)
         file_Path = filename.split('/')
         filepath = '/'.join(file_Path[:-1]) + '/'
         print(filepath)
-        f_training = open(filepath + 'load_model_information.txt', mode = 'w', encoding = 'utf-8')    #载入模型信息留存
+        f_training = open(filepath + 'load_model_information.txt', mode = 'a+', encoding = 'utf-8')    #载入模型信息留存
         f_training.write("载入模型路径：" + filename + '\n')
         f_training.close()
 
